@@ -29,9 +29,17 @@ p { margin:.5em 0; }
   backdrop-filter:blur(10px); border-bottom:1px solid var(--line); }
 .topbar-in { max-width:1040px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; gap:12px; }
 .brand { display:flex; align-items:center; gap:10px; font-weight:800; text-decoration:none; color:var(--text); cursor:pointer; }
-.logo { display:grid; grid-template-columns:1fr 1fr; width:30px; height:30px; border-radius:9px; overflow:hidden; flex:none; }
-.logo i:nth-child(1){background:var(--D)} .logo i:nth-child(2){background:var(--I)}
-.logo i:nth-child(3){background:var(--C)} .logo i:nth-child(4){background:var(--S)}
+.logo { display:grid; grid-template-columns:1fr 1fr; width:30px; height:30px; flex:none; }
+.logo i { display:block; transition:transform .4s cubic-bezier(.5,0,.2,1), border-radius .4s; }
+.logo i:nth-child(1){background:var(--D); border-top-left-radius:9px; --dx:-6px; --dy:-6px; --rot:-90deg}
+.logo i:nth-child(2){background:var(--I); border-top-right-radius:9px; --dx:6px; --dy:-6px; --rot:90deg}
+.logo i:nth-child(3){background:var(--C); border-bottom-left-radius:9px; --dx:-6px; --dy:6px; --rot:90deg}
+.logo i:nth-child(4){background:var(--S); border-bottom-right-radius:9px; --dx:6px; --dy:6px; --rot:-90deg}
+/* 滑鼠移到站名時，四色方塊散開成圓形，移開後收回（只用 transform／過渡，不持續動畫；觸控裝置與「減少動態效果」設定下停用） */
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .brand:hover .logo i { transform:translate(var(--dx),var(--dy)) rotate(var(--rot)) scale(.78); border-radius:50%; }
+}
+@media (prefers-reduced-motion:reduce) { .logo i { transition:none; } }
 .spacer { flex:1; }
 .wrap { max-width:1040px; margin:0 auto; padding:24px 16px 48px; }
 .narrow { max-width:760px; }
@@ -142,6 +150,10 @@ input[type=range]::-moz-range-thumb { width:26px; height:26px; border-radius:50%
 .callout.tip { border-color:var(--S); background:var(--S-soft); } .callout.warn { border-color:var(--I); background:var(--I-soft); }
 .callout.info { border-color:var(--C); background:var(--C-soft); }
 figcaption { font-size:13px; color:var(--muted); margin-top:4px; }
+/* 圖片區塊：圖說置中於圖片下方（圖片較窄時，圖說也會對齊圖片寬度置中） */
+figure.blk { display:flex; flex-direction:column; align-items:flex-start; width:fit-content; max-width:100%; }
+figure.blk img { width:auto; }
+figure.blk figcaption { align-self:stretch; text-align:center; }
 
 /* Modal / toast */
 .modal { position:fixed; inset:0; z-index:50; background:rgba(10,12,30,.55); display:grid; place-items:center; padding:16px; }
