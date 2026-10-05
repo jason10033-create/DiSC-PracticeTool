@@ -204,8 +204,8 @@ async function selfSubmit() {
 }
 function feedbackBlock(r) {
   const val = r.accuracy_feedback || 3, locked = !!r.accuracy_feedback;
-  return `<div style="margin-top:18px;padding:14px 16px;background:var(--surface2);border-radius:12px">
-    <h3 style="margin:0 0 14px">評估結果的準確度回饋</h3>
+  return `<div class="rate-box">
+    <h3>評估結果的準確度回饋</h3>
     <div class="rate-current" id="rateVal">${val}・${RATE_LABELS[val]}</div>
     <input type="range" id="rateInput" min="1" max="5" step="1" value="${val}" ${locked ? "disabled" : ""}>
     <div class="rate-labels"><span>1 非常不準確</span><span>5 非常準確</span></div>
