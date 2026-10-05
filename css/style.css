@@ -41,6 +41,11 @@ p { margin:.5em 0; }
 }
 @media (prefers-reduced-motion:reduce) { .logo i { transition:none; } }
 .spacer { flex:1; }
+/* 淺色／深色模式切換：太陽與月亮並排，目前的模式反白 */
+.theme-switch { display:inline-flex; gap:2px; padding:3px; background:var(--surface2); border:1px solid var(--line); border-radius:99px; flex:none; }
+.theme-switch button { padding:6px 9px; border-radius:99px; background:transparent; color:var(--muted); border:0; line-height:0; font-weight:400; }
+.theme-switch button:hover { opacity:1; color:var(--text); }
+.theme-switch button.on { background:var(--brand); color:var(--brand-ink); }
 .wrap { max-width:1040px; margin:0 auto; padding:24px 16px 48px; }
 .narrow { max-width:760px; }
 .card { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); padding:24px; box-shadow:var(--shadow); }

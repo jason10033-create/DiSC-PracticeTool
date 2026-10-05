@@ -213,7 +213,15 @@ function articleEditor(cats = []) {
       case "heading": return inp("text", "標題文字");
       case "text": return inp("text", "支援 **粗體**、*斜體*、- 清單、[文字](網址)", true);
       case "callout": return `<select data-bi="${i}" data-f="tone" style="max-width:160px;margin-bottom:6px">${[["info", "ℹ️ 資訊"], ["tip", "💡 提示"], ["warn", "⚠️ 注意"]].map(([v, t]) => `<option value="${v}" ${b.tone === v ? "selected" : ""}>${t}</option>`).join("")}</select>${inp("text", "提示內容", true)}`;
-      case "image": return inp("url", "圖片網址") + inp("caption", "圖說（選填）") + up("image/*");
+      case "image": {
+        const w = Math.min(100, Math.max(10, Math.round(+b.width) || 100));
+        return inp("url", "圖片網址") + inp("caption", "圖說（選填）") + up("image/*") +
+          `<div class="row" style="margin-top:10px;gap:10px"><b class="small">顯示大小</b>
+            <input type="range" min="10" max="100" step="5" value="${w}" data-bi="${i}" data-f="width" style="max-width:240px">
+            <span class="small" data-wv="${i}" style="min-width:42px"><b>${w}%</b></span>
+            <b class="small" style="margin-left:8px">對齊</b>
+            <select data-bi="${i}" data-f="align" style="max-width:110px">${[["left", "靠左"], ["center", "置中"], ["right", "靠右"]].map(([v, t]) => `<option value="${v}" ${(b.align || "left") === v ? "selected" : ""}>${t}</option>`).join("")}</select></div>`;
+      }
       case "video": return inp("url", "影片網址（YouTube / Vimeo / mp4 檔案）") + inp("caption", "說明（選填）") + up("video/*");
       case "pdf": return inp("url", "PDF 網址") + inp("caption", "顯示名稱（選填）") + up("application/pdf");
       case "link": return inp("text", "按鈕文字") + inp("url", "連結網址");
@@ -223,7 +231,11 @@ function articleEditor(cats = []) {
   $("#cancel").onclick = () => { editing = null; vTools(); };
   $$("[data-add]").forEach(b => b.onclick = () => { e.blocks.push({ type: b.dataset.add, ...(b.dataset.add === "callout" ? { tone: "info" } : {}) }); drawBlocks(); });
   const bl = $("#blocks");
-  bl.addEventListener("input", ev => { const t = ev.target; if (t.dataset.bi !== undefined) e.blocks[+t.dataset.bi][t.dataset.f] = t.value; });
+  bl.addEventListener("input", ev => {
+    const t = ev.target; if (t.dataset.bi === undefined) return;
+    if (t.dataset.f === "width") { e.blocks[+t.dataset.bi].width = +t.value; $(`[data-wv="${t.dataset.bi}"]`, bl).innerHTML = `<b>${t.value}%</b>`; return; }
+    e.blocks[+t.dataset.bi][t.dataset.f] = t.value;
+  });
   bl.addEventListener("click", ev => {
     const t = ev.target.closest("button"); if (!t) return;
     if (t.dataset.rm !== undefined) { e.blocks.splice(+t.dataset.rm, 1); drawBlocks(); }

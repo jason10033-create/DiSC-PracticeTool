@@ -22,17 +22,17 @@ const select = (table, q = "") => api(`${table}?${q}`);
 /* ---------- 主題 ---------- */
 function applyTheme(t) {
   document.documentElement.dataset.theme = t;
-  const b = $("#themeBtn"); if (b) b.textContent = t === "dark" ? "☀️" : "🌙";
+  // 太陽／月亮兩個按鈕同時顯示，目前採用的模式會反白
+  $$("[data-theme-set]").forEach(b => { const on = b.dataset.themeSet === t; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
 }
 function initTheme() {
   let t = null; try { t = localStorage.getItem("disc_theme"); } catch {}
-  if (!t) t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   applyTheme(t);
-  const b = $("#themeBtn");
-  if (b) b.onclick = () => {
-    const n = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  $$("[data-theme-set]").forEach(b => b.onclick = () => {
+    const n = b.dataset.themeSet;
     applyTheme(n); try { localStorage.setItem("disc_theme", n); } catch {}
-  };
+  });
 }
 function toast(msg) {
   let t = $("#toast"); if (!t) { t = document.createElement("div"); t.id = "toast"; document.body.appendChild(t); }
@@ -66,7 +66,13 @@ function renderBlock(b) {
     case "heading": return `<h2 class="blk">${esc(b.text)}</h2>`;
     case "text": return `<div class="blk">${md(b.text || "")}</div>`;
     case "callout": return `<div class="blk callout ${esc(b.tone || "info")}">${md(b.text || "")}</div>`;
-    case "image": return u ? `<figure class="blk" style="margin:14px 0"><img src="${esc(u)}" alt="${esc(b.caption || "")}" loading="lazy">${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ""}</figure>` : "";
+    case "image": {
+      if (!u) return "";
+      // 顯示大小：寬度占內容區的百分比（10–100）；100 或未設定＝原本行為（原尺寸、最大不超過內容寬度）
+      const w = Math.min(100, Math.max(10, Math.round(+b.width) || 100));
+      const margin = w >= 100 || !b.align ? "14px 0" : b.align === "center" ? "14px auto" : b.align === "right" ? "14px 0 14px auto" : "14px auto 14px 0";
+      return `<figure class="blk" style="margin:${margin}${w < 100 ? `;width:${w}%` : ""}"><img src="${esc(u)}" alt="${esc(b.caption || "")}" loading="lazy"${w < 100 ? ` style="width:100%"` : ""}>${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ""}</figure>`;
+    }
     case "video": {
       if (!u) return "";
       const e = embedUrl(u);
