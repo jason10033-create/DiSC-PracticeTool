@@ -156,7 +156,11 @@ input[type=range]::-moz-range-thumb { width:26px; height:26px; border-radius:50%
 .article-item { display:block; text-align:left; width:100%; color:var(--text); background:var(--surface);
   border:1px solid var(--line); border-radius:14px; padding:16px 18px; font-weight:400; box-shadow:var(--shadow); }
 .article-item strong { font-size:17px; display:block; }
-.blk { margin:14px 0; }
+/* 教材區塊（標題／文字／圖片／提示框…）之間的距離：28px（原本 14px 的兩倍）；摘要後的第一個與最後一個區塊維持原本距離 */
+:root { --blk-gap:28px; }
+.blk { margin:var(--blk-gap) 0; }
+p.muted + .blk { margin-top:14px; }
+.card > .blk:last-child, #pv > .blk:last-child { margin-bottom:14px; }
 .blk img,.blk video,.blk iframe { max-width:100%; border-radius:12px; display:block; }
 .blk iframe { width:100%; border:0; }
 .blk .ratio { aspect-ratio:16/9; }

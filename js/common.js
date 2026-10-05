@@ -70,8 +70,9 @@ function renderBlock(b) {
       if (!u) return "";
       // 顯示大小：寬度占內容區的百分比（10–100）；100 或未設定＝原本行為（原尺寸、最大不超過內容寬度）
       const w = Math.min(100, Math.max(10, Math.round(+b.width) || 100));
-      const margin = w >= 100 || !b.align ? "14px 0" : b.align === "center" ? "14px auto" : b.align === "right" ? "14px 0 14px auto" : "14px auto 14px 0";
-      return `<figure class="blk" style="margin:${margin}${w < 100 ? `;width:${w}%` : ""}"><img src="${esc(u)}" alt="${esc(b.caption || "")}" loading="lazy"${w < 100 ? ` style="width:100%"` : ""}>${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ""}</figure>`;
+      // 上下間距交給 CSS（.blk），這裡只處理左右對齊
+      const side = w >= 100 || !b.align ? "" : b.align === "center" ? "margin-left:auto;margin-right:auto;" : b.align === "right" ? "margin-left:auto;" : "margin-right:auto;";
+      return `<figure class="blk"${w < 100 ? ` style="${side}width:${w}%"` : ""}><img src="${esc(u)}" alt="${esc(b.caption || "")}" loading="lazy"${w < 100 ? ` style="width:100%"` : ""}>${b.caption ? `<figcaption>${esc(b.caption)}</figcaption>` : ""}</figure>`;
     }
     case "video": {
       if (!u) return "";
