@@ -255,7 +255,7 @@ function closeResult(r, pat) {
         box(`偏低的面向：${TLABEL[low]} ${TNAME[low]}`, `<p>${esc(T.lowNote)}</p>`, `t-${low}`) + brief(arc) + commBox(T.comm) };
   }
   return { badge: letters(CIRCLE), title: "四種風格分數接近（均衡型）", tagline: `四個分數最高與最低只差 ${pat.spread} 分，沒有哪一個風格特別突出，不分主型與輔型`,
-    tips: box("你的分數形態", `<p>你的 D、i、S、C 四個分數非常接近（最高與最低相差 ${pat.spread} 分），沒有哪一個風格特別突出。</p>`) + box("為什麼會這樣？", `<p>${esc(QUAD_TEXT.why)}</p>`) +
+    tips: box("你的分數形態", `<p>你的 D、i、S、C 四個分數非常接近（最高與最低相差 ${pat.spread} 分），沒有哪一個風格特別突出。</p>`) +
       box("可能的原因（可能不只一種）", ul(QUAD_TEXT.possibilities)) + box("可以怎麼做？", ul(QUAD_TEXT.tips)) + brief(CIRCLE) + commBox(QUAD_TEXT.comm) };
 }
 async function selfResult(r, saved) {
