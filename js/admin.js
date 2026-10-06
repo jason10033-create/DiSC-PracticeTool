@@ -123,12 +123,14 @@ async function vIntro(kind) {
       ${kind === "self" ? `<div class="grid c2"><div><label class="f">姓名欄位標籤</label><input type="text" data-f="nameLabel" value="${esc(I.nameLabel)}"></div>
         <div><label class="f">姓名欄位提示文字</label><input type="text" data-f="namePlaceholder" value="${esc(I.namePlaceholder)}"></div></div>` : ""}
       <label class="f">開始按鈕文字</label><input type="text" data-f="startBtn" value="${esc(I.startBtn)}" style="max-width:240px">
+      ${kind === "others" ? `<label class="f">結果頁最下方的提示框文字（學員看完識別結果後出現；支援 **粗體**；留空＝不顯示）</label><textarea data-f="resultNote" style="min-height:84px">${esc(I.resultNote || "")}</textarea>` : ""}
       <div class="row" style="margin-top:14px"><button data-save="${kind}">💾 儲存</button><button class="ghost" data-reset="${kind}" ${custom ? "" : "disabled"}>還原預設</button></div></div>`;
   };
   $("#view").innerHTML = `<p class="muted">編輯學員進入「${kind === "self" ? "看懂自己" : "識別他人"}」後，開始作答前看到的所有文字。儲存後重新整理前台即可生效。</p>${card(kind)}`;
   $$("[data-save]").forEach(b => b.onclick = () => busy(b, async () => {
     const c = $(`[data-kind="${kind}"]`), g = f => { const e = $(`[data-f="${f}"]`, c); return e ? e.value.trim() : DEFAULT_INTRO[kind][f]; };
     const data = { title: g("title"), subtitle: g("subtitle"), noticeTitle: g("noticeTitle"), notices: lines(g("notices")), howTitle: g("howTitle"), howText: g("howText"), nameLabel: g("nameLabel"), namePlaceholder: g("namePlaceholder"), startBtn: g("startBtn") };
+    if (kind === "others") data.resultNote = g("resultNote"); // 空字串＝不顯示提示框
     if (!data.title || !data.startBtn) return toast("頁面標題與開始按鈕文字不可空白");
     await A("admin_upsert_site", { p_key: "intro_" + kind, p_data: data }); toast("已儲存"); vIntro(kind);
   }));

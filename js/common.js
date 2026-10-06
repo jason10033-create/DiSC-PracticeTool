@@ -590,7 +590,8 @@ const DEFAULT_INTRO = {
     howText: "",
     nameLabel: "",
     namePlaceholder: "",
-    startBtn: "開始"
+    startBtn: "開始",
+    resultNote: "如果你已經非常熟悉他／她的行為與處事方式，可以改用「看懂自己」的測評，站在對方的角度換位思考作答，推測他／她更完整的**主型＋輔型**。"
   }
 };
 const getIntro = (map, kind) => ({ ...DEFAULT_INTRO[kind], ...((map && map["intro_" + kind]) || {}) });

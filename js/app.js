@@ -287,6 +287,7 @@ async function selfResult(r, saved) {
 
 /* ---------- 03 識別他人 ---------- */
 let othersRun = null;
+const OTHERS_CLOSE_GAP = 20; // 識別他人：與最高比重相差 ≤ 此百分點的類型都列為「可能」（10 題時 20% ＝ 差 2 題）
 async function othersPage() {
   const I = getIntro(SITE, "others");
   app.innerHTML = `<div class="narrow" style="margin:auto">${back()}<div class="card">${introHtml(I)}
@@ -318,16 +319,24 @@ function othersResult() {
   r.qs.forEach(q => { const a = r.ans[q.id]; if (a !== undefined && a !== null) { cnt[q.options[a].type]++; n++; } });
   if (!n) { toast("至少要回答一題喔"); return othersQ(); }
   const pct = {}; TYPES.forEach(t => pct[t] = Math.round(cnt[t] / n * 100));
-  const max = Math.max(...TYPES.map(t => cnt[t])), tops = TYPES.filter(t => cnt[t] === max), top = tops[0];
-  store.sset("other_style", top);
+  // 比重與最高者相差 ≤ OTHERS_CLOSE_GAP（百分點）的類型都列為「可能」，不直接以最高者為主型
+  const ranked = [...TYPES].sort((a, b) => cnt[b] - cnt[a] || TYPES.indexOf(a) - TYPES.indexOf(b));
+  const cands = ranked.filter(t => cnt[t] > 0 && pct[ranked[0]] - pct[t] <= OTHERS_CLOSE_GAP);
+  const top = cands[0], multi = cands.length > 1;
+  const items = cands.map(t => `${TLABEL[t]} 型`), list = items.length > 1 ? items.slice(0, -1).join("、") + "或 " + items[items.length - 1] : items[0];
+  const gapPct = pct[cands[0]] - pct[cands[cands.length - 1]];
+  const note = (getIntro(SITE, "others").resultNote || "").trim();
   app.innerHTML = `<div class="narrow" style="margin:auto">${back()}<div class="card">
-    <p class="muted">依據你的 ${n} 題觀察，這個人最可能的主型是</p>
-    <div class="row" style="gap:20px"><div class="styleBadge t-${top}" style="color:var(--c)">${TLABEL[top]}</div>
-      <div><h2 style="margin:0">${TNAME[top]}${tops.length > 1 ? `（另有並列：${tops.slice(1).map(t => TLABEL[t] + " " + TNAME[t]).join("、")}）` : ""}</h2>
-      <p class="muted" style="margin:0">${esc(PROFILE[top].short)}</p></div></div>
+    <p class="muted">依據你的 ${n} 題觀察，這個人${multi ? "可能是" : "最可能的主型是"}</p>
+    <div class="row" style="gap:20px"><div class="styleBadge">${cands.map(t => `<span class="t-${t}" style="color:var(--c)">${TLABEL[t]}</span>`).join(multi ? `<span class="muted" style="font-size:.5em;margin:0 6px">／</span>` : "")}</div>
+      <div><h2 style="margin:0">${multi ? esc(list) : TNAME[top]}</h2>
+      <p class="muted" style="margin:0">${multi ? `這幾個類型的比重很接近（${gapPct === 0 ? "比重相同" : `最高與最低相差 ${gapPct}%`}），目前還不足以判斷是哪一種` : esc(PROFILE[top].short)}</p></div></div>
     <h3 style="margin-top:18px">四種風格的可能比重</h3>${barsHtml(pct, "%")}
-    ${tops.length > 1 || n < 6 ? `<p class="notice small">${tops.length > 1 ? "有多個類型比重相同，建議再多觀察一些行為後再判斷。" : "作答題數較少，結果僅供參考。"}</p>` : ""}
-    <div class="box t-${top}" style="margin-top:12px"><h3>跟${TLABEL[top]}型的人溝通</h3><ul>${PROFILE[top].comm.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>
+    ${multi ? `<div class="notice small" style="margin-top:12px"><b>可能需要搭配更多觀察</b>
+      <ul>${cands.map(t => `<li><b>${TLABEL[t]} ${TNAME[t]}</b>：${esc(PROFILE[t].short)}</li>`).join("")}</ul>
+      <p style="margin:6px 0 0">建議再多觀察這個人在不同情境（開會、閒聊、遇到壓力或變動時）的表現，再判斷更貼近哪一種。</p></div>` : ""}
+    ${n < 6 ? `<p class="notice small">作答題數較少，結果僅供參考。</p>` : ""}
+    ${note ? `<div class="notice" style="margin-top:16px">${md(note)}</div>` : ""}
     <div class="row between" style="margin-top:16px"><button class="ghost" id="redo">重新識別另一個人</button><a class="btn" href="#/adapt">用「風格應對神器」找出相處之道 →</a></div></div></div>`;
   $("#redo").onclick = othersPage;
 }
