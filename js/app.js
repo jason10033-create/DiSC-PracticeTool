@@ -226,21 +226,57 @@ function bindFeedback(clientId) {
     } finally { btn.textContent = t; }
   };
 }
+/* 分數接近（並重）時的結果內容：雙型／三高一低／四型均衡，回傳標題區與說明區 */
+function closeResult(r, pat) {
+  const sc = r.scores, ul = a => `<ul>${a.map(x => `<li>${esc(x)}</li>`).join("")}</ul>`;
+  const box = (title, body, cls = "") => `<div class="box ${cls}"><h3>${title}</h3>${body}</div>`;
+  const letters = ts => ts.map(t => `<span class="t-${t}" style="color:var(--c)">${TLABEL[t]}</span>`).join("");
+  const typeBox = t => { const d = getType(adaptMap, t); return box(`${TLABEL[t]} ${TNAME[t]}`, `<p>${esc(d.summary)}</p><p><b>在乎：</b>${esc(d.want)}<br><b>壓力來源：</b>${esc(d.stress)}</p>`, `t-${t}`); };
+  const brief = ts => box("各風格的特質", `<ul>${ts.map(t => `<li><b>${TLABEL[t]} ${TNAME[t]}</b>：${esc(getType(adaptMap, t).summary.replace(/^[^：]*：/, ""))}</li>`).join("")}</ul>`);
+  const commBox = a => box("別人怎麼跟你溝通最有效？", ul(a));
+  if (pat.kind === "dual") {
+    const [h, l] = pat.high, diff = sc[h] - sc[l], T = DUAL_TEXT[dualKey(h, l)], gapTxt = diff === 0 ? "分數相同" : `相差 ${diff} 分`;
+    if (T.forms) {
+      const f1 = findStyle(h, l), f2 = findStyle(l, h);
+      return { badge: letters([h, l]), title: `${styleLabel(f1)} 或 ${styleLabel(f2)}`, tagline: `${TLABEL[h]} 與 ${TLABEL[l]} 的分數非常接近（${gapTxt}），兩種組合都有可能`,
+        tips: box("兩種組合都有可能", `<p><b>${styleLabel(f1)}</b>：${esc(T.forms[f1])}</p><p><b>${styleLabel(f2)}</b>：${esc(T.forms[f2])}</p>`) +
+          box("為什麼分數會這麼接近？", `<p>${esc(T.why)}</p>`) + box("怎麼判斷哪一個更像你？", `<p>${esc(T.tell)}</p>`) +
+          typeBox(h) + typeBox(l) + commBox(T.comm) };
+    }
+    return { badge: letters([h, l]), title: `${TLABEL[h]} 與 ${TLABEL[l]} 並重（對角型）`, tagline: `兩個風格的分數非常接近（${gapTxt}），不分主型與輔型`,
+      tips: box("這是比較少見的組合", `<p>${esc(T.blend)}</p>`) + box("可能的原因（可能不只一種）", ul(T.reasons)) + box("怎麼觀察自己？", `<p>${esc(T.tell)}</p>`) +
+        typeBox(h) + typeBox(l) + commBox(T.comm) };
+  }
+  if (pat.kind === "triple") {
+    const low = pat.low[0], T = TRIPLE_TEXT[low], arc = [1, 2, 3].map(k => CIRCLE[(CIRCLE.indexOf(low) + k) % 4]);
+    return { badge: letters(arc), title: `${arc.map(t => TLABEL[t]).join("、")} 三個風格偏高，${TLABEL[low]} 偏低`,
+      tagline: `三個風格的分數很接近（相差 ${sc[pat.high[0]] - sc[pat.high[2]]} 分），不分主型與輔型`,
+      tips: box("你的分數形態", `<p>${esc(T.summary)}</p>`) + box("為什麼會這樣？", `<p>${esc(T.why)}</p>`) + box("可能的原因（可能不只一種）", ul(T.possibilities)) +
+        box(`偏低的面向：${TLABEL[low]} ${TNAME[low]}`, `<p>${esc(T.lowNote)}</p>`, `t-${low}`) + brief(arc) + commBox(T.comm) };
+  }
+  return { badge: letters(CIRCLE), title: "四種風格分數接近（均衡型）", tagline: `四個分數最高與最低只差 ${pat.spread} 分，沒有哪一個風格特別突出，不分主型與輔型`,
+    tips: box("你的分數形態", `<p>你的 D、i、S、C 四個分數非常接近（最高與最低相差 ${pat.spread} 分），沒有哪一個風格特別突出。</p>`) + box("為什麼會這樣？", `<p>${esc(QUAD_TEXT.why)}</p>`) +
+      box("可能的原因（可能不只一種）", ul(QUAD_TEXT.possibilities)) + box("可以怎麼做？", ul(QUAD_TEXT.tips)) + brief(CIRCLE) + commBox(QUAD_TEXT.comm) };
+}
 async function selfResult(r, saved) {
   adaptMap = await loadAdaptMap();
   const { p, s } = styleParts(r.style);
   store.sset("my_style", r.style);
   const tp = getType(adaptMap, p), ts = s ? getType(adaptMap, s) : null;
   const sec = s ? `<div class="box t-${s}"><h3>輔型：${TLABEL[s]} ${TNAME[s]}</h3><p>${esc(ts.summary)}</p></div>` : "";
+  const pat = analyzeScores(r.scores), close = pat.kind !== "single" ? closeResult(r, pat) : null;
+  const head = close
+    ? `<div class="row" style="gap:20px"><div class="styleBadge">${close.badge}</div><div><h2 style="margin:0">${esc(close.title)}</h2><p class="muted" style="margin:0">${esc(close.tagline)}</p></div></div>`
+    : `<div class="row" style="gap:20px"><div class="styleBadge t-${p}" style="color:var(--c)">${styleLabel(r.style)}</div>
+      <div><h2 style="margin:0">${TNAME[p]}${s ? `・帶有${TNAME[s]}傾向` : ""}</h2><p class="muted" style="margin:0">${esc(PROFILE[p].short)}</p></div></div>`;
+  const tips = close ? close.tips : `<div class="box t-${p}"><h3>主型：${TLABEL[p]} ${TNAME[p]}</h3><p>${esc(tp.summary)}</p>
+        <p><b>在乎：</b>${esc(tp.want)}<br><b>壓力來源：</b>${esc(tp.stress)}</p></div>${sec}
+      <div class="box"><h3>別人怎麼跟你溝通最有效？</h3><ul>${tp.dos.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>`;
   app.innerHTML = `<div class="narrow" style="margin:auto">${back()}<div class="card">
     <p class="muted">${esc(r.user_name)} 的 DiSC 風格</p>
-    <div class="row" style="gap:20px"><div class="styleBadge t-${p}" style="color:var(--c)">${styleLabel(r.style)}</div>
-      <div><h2 style="margin:0">${TNAME[p]}${s ? `・帶有${TNAME[s]}傾向` : ""}</h2><p class="muted" style="margin:0">${esc(PROFILE[p].short)}</p></div></div>
+    ${head}
     <div class="grid c2" style="margin-top:20px;align-items:center"><div class="circleWrap">${circleSvg(r.scores)}</div><div>${barsHtml(r.scores)}<p class="muted small">分數 0–100，越高代表該傾向越明顯。</p></div></div>
-    <div class="tips" style="margin-top:16px">
-      <div class="box t-${p}"><h3>主型：${TLABEL[p]} ${TNAME[p]}</h3><p>${esc(tp.summary)}</p>
-        <p><b>在乎：</b>${esc(tp.want)}<br><b>壓力來源：</b>${esc(tp.stress)}</p></div>${sec ? "" : ""}${sec}
-      <div class="box"><h3>別人怎麼跟你溝通最有效？</h3><ul>${tp.dos.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div></div>
+    <div class="tips" style="margin-top:16px">${tips}</div>
     <p class="muted small" style="margin-top:14px">最後測評時間：${new Date(r.updated_at).toLocaleString("zh-TW")}。DiSC 描述的是行為傾向，會隨情境變化，結果僅供參考。</p>
     ${feedbackBlock(r)}
     <div class="row between" style="margin-top:16px"><button class="ghost" id="redo">重新測驗</button>
