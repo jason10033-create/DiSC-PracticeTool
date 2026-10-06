@@ -321,7 +321,9 @@ function othersResult() {
   const pct = {}; TYPES.forEach(t => pct[t] = Math.round(cnt[t] / n * 100));
   // 比重與最高者相差 ≤ OTHERS_CLOSE_GAP（百分點）的類型都列為「可能」，不直接以最高者為主型
   const ranked = [...TYPES].sort((a, b) => cnt[b] - cnt[a] || TYPES.indexOf(a) - TYPES.indexOf(b));
-  const cands = ranked.filter(t => cnt[t] > 0 && pct[ranked[0]] - pct[t] <= OTHERS_CLOSE_GAP);
+  let cands = ranked.filter(t => cnt[t] > 0 && pct[ranked[0]] - pct[t] <= OTHERS_CLOSE_GAP);
+  // 只列第一、第二比重的類型（第三名以後可能性較低）；若與第二名同分，則一併列出，避免任意取捨
+  if (cands.length > 2) cands = cands.filter(t => cnt[t] >= cnt[cands[1]]);
   const top = cands[0], multi = cands.length > 1;
   const items = cands.map(t => `${TLABEL[t]} 型`), list = items.length > 1 ? items.slice(0, -1).join("、") + "或 " + items[items.length - 1] : items[0];
   const gapPct = pct[cands[0]] - pct[cands[cands.length - 1]];
