@@ -336,7 +336,7 @@ function othersResult() {
       <ul>${cands.map(t => `<li><b>${TLABEL[t]} ${TNAME[t]}</b>：${esc(PROFILE[t].short)}</li>`).join("")}</ul>
       <p style="margin:6px 0 0">建議再多觀察這個人在不同情境（開會、閒聊、遇到壓力或變動時）的表現，再判斷更貼近哪一種。</p></div>` : ""}
     ${n < 6 ? `<p class="notice small">作答題數較少，結果僅供參考。</p>` : ""}
-    ${note ? `<div class="notice" style="margin-top:16px">${md(note)}</div>` : ""}
+    ${note ? `<div class="callout info" style="margin-top:16px">${md(note)}</div>` : ""}
     <div class="row between" style="margin-top:16px"><button class="ghost" id="redo">重新識別另一個人</button><a class="btn" href="#/adapt">用「風格應對神器」找出相處之道 →</a></div></div></div>`;
   $("#redo").onclick = othersPage;
 }
