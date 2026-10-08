@@ -150,6 +150,18 @@ input[type=range]::-moz-range-thumb { width:26px; height:26px; border-radius:50%
 .rate-box .row { margin-top:8px !important; }
 .rate-box .small { font-size:12px; }
 .rate-box button { padding:6px 14px; font-size:13px; border-radius:10px; }
+
+/* 後台 DiSC 分布圖：即時姓名提示與「顯示所有姓名」 */
+svg.scatter { overflow:visible; }
+svg.scatter circle.dot { cursor:pointer; transition:stroke-width .08s; }
+svg.scatter circle.dot:hover { stroke-width:3.5; }
+svg.scatter .names { display:none; }
+svg.scatter.show-names .names { display:inline; }
+svg.scatter .names .leaders line { stroke:rgba(255,255,255,.85); stroke-width:.7; }
+svg.scatter .names text { fill:#fff; stroke:rgba(15,20,40,.75); stroke-width:2.4px; paint-order:stroke; stroke-linejoin:round; font-weight:700; }
+#scatterTip { position:fixed; z-index:200; left:0; top:0; display:none; pointer-events:none; max-width:280px; white-space:pre-line;
+  background:#1d2233; color:#fff; font-size:13px; line-height:1.5; font-weight:600; padding:6px 10px; border-radius:8px; border:1px solid rgba(255,255,255,.28); box-shadow:0 4px 14px rgba(0,0,0,.35); }
+#scatterTip.on { display:block; }
 .box ul { margin:4px 0; padding-left:20px; }
 
 /* 教材 */

@@ -388,8 +388,9 @@ async function vReport() {
   $("#view").innerHTML = scopeCard + `<div class="grid c2" style="margin-top:16px">
     <div class="card"><h2>主型人數分布（共 ${n} 人）</h2>${TYPES.map(t => `<div class="bar-row t-${t}"><b>${TLABEL[t]} ${TNAME[t]}</b><div class="track"><div class="fill" style="width:${prim[t] / n * 100}%"></div></div><span>${prim[t]}人</span></div>`).join("")}</div>
     <div class="card"><h2>全體平均分數</h2>${barsHtml(avg)}</div></div>
-  <div class="card" style="margin-top:16px"><h2>DiSC 分布圖</h2><p class="muted">每個點代表一位填答者，位置依其 D／i／S／C 分數計算；分數雷同的填答者會合併成同一個圓圈並標示人數，滑鼠移到點上可看到所有人的姓名。</p>
-    <div class="circleWrap" style="max-width:360px">${discScatterSvg(rows)}</div></div>
+  <div class="card" style="margin-top:16px"><div class="row between"><h2>DiSC 分布圖</h2><button class="soft sm" id="toggleNames" aria-pressed="false">顯示所有姓名</button></div>
+    <p class="muted">每個點代表一位填答者，位置依其 D／i／S／C 分數計算；分數雷同的填答者會合併成同一個圓圈並標示人數。滑鼠移到圓圈上會立即顯示姓名，也可以按右上角按鈕一次顯示或隱藏所有姓名。</p>
+    <div class="circleWrap" id="scatterWrap" style="max-width:360px">${discScatterSvg(rows)}</div></div>
   <div class="card" style="margin-top:16px"><h2>評估結果準確度回饋</h2>
     ${rated.length ? `<p class="muted">已有 ${rated.length} / ${n} 人回饋，平均 <b>${avgRate}</b> 分（滿分 5）。</p>
       ${[5, 4, 3, 2, 1].map(k => `<div class="bar-row" style="grid-template-columns:90px 1fr 44px"><b>${k}・${RATE_LABELS[k]}</b><div class="track"><div class="fill" style="width:${rateCount[k] / maxRate * 100}%;background:var(--brand)"></div></div><span>${rateCount[k]}人</span></div>`).join("")}`
@@ -397,6 +398,7 @@ async function vReport() {
   <div class="card" style="margin-top:16px"><h2>12 種風格分布</h2>${STYLES.map(s => `<div class="bar-row t-${styleParts(s).p}" style="grid-template-columns:70px 1fr 44px"><b>${styleLabel(s)}</b><div class="track"><div class="fill" style="width:${sty[s] / maxS * 100}%"></div></div><span>${sty[s]}人</span></div>`).join("")}
     <p class="muted small">僅統計使用新版測評（含風格代碼）的紀錄。</p></div>`;
   bindScope();
+  bindScatter($("#scatterWrap"), $("#toggleNames"), !!bindScatter.show); // 切換統計範圍重新繪圖後，維持上次的「顯示姓名」狀態
 }
 
 /* ---------- 計分邏輯 ---------- */

@@ -517,8 +517,9 @@ function circleSvg(scores) {
   return `<svg viewBox="0 0 220 220" role="img" aria-label="DiSC 圓形圖">${discQuadrantSvg("main")}
     <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="11" fill="#fff" stroke="#1d2233" stroke-width="4"/></svg>`;
 }
-/* 多人散點圖：每個填答者一個點，滑鼠移到點上顯示姓名（title 提示）；
-   位置相近（分數雷同）的填答者會合併成同一個圓圈，圈上標示人數，提示文字列出所有人的姓名 */
+/* 多人散點圖：每個填答者一個點；位置相近（分數雷同）的填答者會合併成同一個圓圈，圈上標示人數。
+   姓名有兩種看法：① 滑鼠移到圓圈上，立即顯示姓名（bindScatter 的自訂提示，無延遲）；
+   ② 按鈕一次顯示所有姓名（svg 加上 show-names 類別，標籤位置已自動避開彼此與其他圓圈） */
 function discScatterSvg(rows) {
   const CLUSTER_R = 5; // 視窗座標系 220×220 中，多近視為「雷同」
   const groups = [];
@@ -529,16 +530,60 @@ function discScatterSvg(rows) {
     if (!g) { g = { x: p.x, y: p.y, items: [] }; groups.push(g); }
     g.items.push({ name: r.user_name, style: r.style, t }); // 群中心固定用第一個加入者的位置
   });
+  groups.forEach(g => { g.r = Math.min(7 + (g.items.length - 1) * 2.5, 16); });
+  // --- 姓名標籤位置：每個圓圈周圍嘗試 8 個方向 × 3 種距離，挑「與其他標籤、圓圈重疊最少、離圓圈最近」的位置；
+  //     離圓圈較遠時補一條細引線，避免分不清標籤屬於哪個圓圈 ---
+  const FS = 8.5, LH = 10.5, textW = s => [...s].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? FS : FS * 0.58), 0);
+  const placed = [];
+  const overlapArea = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
+  const circleHit = (b, c) => { const nx = Math.max(b.l, Math.min(c.x, b.r)), ny = Math.max(b.t, Math.min(c.y, b.b)); return Math.hypot(c.x - nx, c.y - ny) < c.r + 0.5; };
+  const cost = (b, dist) => {
+    let c = dist * 0.4;
+    placed.forEach(p => { c += overlapArea(b, p) * 3; });
+    groups.forEach(g => { if (circleHit(b, g)) c += 60; });
+    const out = Math.max(0, -6 - b.l) + Math.max(0, b.r - 226) + Math.max(0, -b.t) + Math.max(0, b.b - 222); // 超出畫面的距離
+    return c + out * 8;
+  };
+  const edges = [];
+  const labels = [...groups].sort((a, b) => b.items.length - a.items.length || a.y - b.y || a.x - b.x).map(g => {
+    const names = g.items.map(i => i.name), w = Math.max(...names.map(textW)) + 1, h = names.length * LH;
+    let best = null;
+    for (const dist of [2, 9, 17]) {
+      const d = g.r + dist, dd = d * 0.72;
+      [[d, 0, "start"], [-d, 0, "end"], [0, d, "middle"], [0, -d, "middle"], [dd, dd, "start"], [dd, -dd, "start"], [-dd, dd, "end"], [-dd, -dd, "end"]].forEach(([dx, dy, anchor]) => {
+        const ax = g.x + dx, ay = g.y + dy; // 標籤的錨點
+        const l = anchor === "start" ? ax : anchor === "end" ? ax - w : ax - w / 2;
+        const t = dy === 0 ? ay - h / 2 : dy > 0 ? ay : ay - h;
+        const b = { l, t, r: l + w, b: t + h, anchor, tx: ax, dist, ax, ay };
+        b.cost = cost(b, dist); if (!best || b.cost < best.cost) best = b;
+      });
+      if (best && best.cost < 1) break; // 近距離已有無重疊的位置就不再往外找
+    }
+    placed.push(best);
+    if (best.dist > 2) edges.push(`<line x1="${g.x.toFixed(1)}" y1="${g.y.toFixed(1)}" x2="${best.ax.toFixed(1)}" y2="${best.ay.toFixed(1)}"/>`);
+    return names.map((n, i) => `<text x="${best.tx.toFixed(1)}" y="${(best.t + 7.6 + i * LH).toFixed(1)}" text-anchor="${best.anchor}">${esc(n)}</text>`).join("");
+  }).join("");
   const dots = groups.map(g => {
-    const n = g.items.length;
     const cnt = {}; g.items.forEach(i => cnt[i.t] = (cnt[i.t] || 0) + 1);
     const mainType = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
-    const r = Math.min(7 + (n - 1) * 2.5, 16);
-    const label = g.items.map(i => `${i.name}${i.style ? "（" + styleLabel(i.style) + "）" : ""}`).join("、");
-    return `<g><circle cx="${g.x.toFixed(1)}" cy="${g.y.toFixed(1)}" r="${r}" fill="var(--${mainType})" stroke="#fff" stroke-width="2" opacity=".92"><title>${esc(label)}</title></circle>
-      ${n > 1 ? `<text x="${g.x.toFixed(1)}" y="${(g.y + 4).toFixed(1)}" font-size="11" font-weight="800" fill="#fff" text-anchor="middle" pointer-events="none">${n}</text>` : ""}</g>`;
+    const tip = g.items.map(i => `${i.name}${i.style ? "（" + styleLabel(i.style) + "）" : ""}`).join("\n");
+    return `<g><circle class="dot" data-tip="${esc(tip)}" aria-label="${esc(tip.replace(/\n/g, "、"))}" cx="${g.x.toFixed(1)}" cy="${g.y.toFixed(1)}" r="${g.r}" fill="var(--${mainType})" stroke="#fff" stroke-width="2" opacity=".92"/>
+      ${g.items.length > 1 ? `<text x="${g.x.toFixed(1)}" y="${(g.y + 4).toFixed(1)}" font-size="11" font-weight="800" fill="#fff" text-anchor="middle" pointer-events="none">${g.items.length}</text>` : ""}</g>`;
   }).join("");
-  return `<svg viewBox="0 0 220 220" role="img" aria-label="所有填答者的 DiSC 分布散點圖">${discQuadrantSvg("rep")}${dots}</svg>`;
+  return `<svg class="scatter" viewBox="0 0 220 220" role="img" aria-label="所有填答者的 DiSC 分布散點圖">${discQuadrantSvg("rep")}${dots}<g class="names" font-size="${FS}" pointer-events="none"><g class="leaders">${edges.join("")}</g>${labels}</g></svg>`;
+}
+/* 散點圖互動：即時姓名提示（不用瀏覽器內建 title，避免延遲）＋「顯示／隱藏所有姓名」切換 */
+function bindScatter(root, toggleBtn, initialShow = false) {
+  const svg = $("svg.scatter", root); if (!svg) return;
+  let tip = $("#scatterTip"); if (!tip) { tip = document.createElement("div"); tip.id = "scatterTip"; document.body.appendChild(tip); }
+  const move = e => { const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight; tip.style.left = Math.min(e.clientX + pad, innerWidth - w - 6) + "px"; tip.style.top = Math.min(e.clientY + pad, innerHeight - h - 6) + "px"; };
+  svg.addEventListener("mouseover", e => { const d = e.target.closest("circle.dot"); if (!d) return; tip.textContent = d.dataset.tip; tip.classList.add("on"); move(e); });
+  svg.addEventListener("mousemove", e => { if (tip.classList.contains("on")) move(e); });
+  svg.addEventListener("mouseout", e => { if (e.target.closest("circle.dot")) tip.classList.remove("on"); });
+  svg.addEventListener("mouseleave", () => tip.classList.remove("on"));
+  const apply = on => { svg.classList.toggle("show-names", on); if (toggleBtn) { toggleBtn.textContent = on ? "隱藏所有姓名" : "顯示所有姓名"; toggleBtn.setAttribute("aria-pressed", on ? "true" : "false"); } };
+  if (toggleBtn) toggleBtn.onclick = () => { const on = !svg.classList.contains("show-names"); apply(on); bindScatter.show = on; };
+  apply(initialShow);
 }
 function barsHtml(scores, suffix = "") {
   return [...TYPES].sort((a, b) => scores[b] - scores[a]).map(t => `
