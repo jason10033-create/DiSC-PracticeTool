@@ -266,17 +266,27 @@ async function vQuestions(kind) {
   const qs = await select("questions", `kind=eq.${kind}&order=sort.asc,updated_at.asc`);
   CFG = await A("admin_get_config");
   const isSelf = kind === "self";
+  const sr = isSelf ? getSelfResult(Object.fromEntries((await select("site_content", "key=eq.self_result&select=key,data")).map(r => [r.key, r.data]))) : null;
   $("#view").innerHTML = `
   ${isSelf ? `<div class="card"><h2>⚙️ 測評設定</h2>
     <label class="switch"><input type="checkbox" id="cRand" ${CFG.randomize ? "checked" : ""}> 題目順序隨機打亂（每位填答者不同；四個選項一律隨機排列）</label>
     <label class="switch" style="margin-top:8px"><input type="checkbox" id="cShow" ${CFG.show_results ? "checked" : ""}> 公開測評結果給填答者（勾選＝填答完即可看結果，且下次進入仍可看到上次結果；未勾選＝僅告知已完成）</label>
     <label class="f">輔型判定門檻（分數差 ≤ 此值才顯示「主型＋輔型」；0＝只顯示主型）</label><input type="number" id="cGap" min="0" max="50" value="${CFG.secondary_gap}" style="max-width:120px">
-    <p><button id="saveCfg">儲存設定</button></p></div>` : ""}
+    <p><button id="saveCfg">儲存設定</button></p></div>
+  <div class="card" style="margin-top:16px"><h2>結果頁設定</h2>
+    <label class="switch"><input type="checkbox" id="srFeedback" ${sr.feedbackEnabled ? "checked" : ""}> 顯示「評估結果的準確度回饋」（1–5 分滑桿；取消勾選＝學員結果頁不出現這個功能）</label>
+    <label class="f">回饋下方的重點提示文字（支援 **粗體**，會以醒目的重點樣式顯示；留空＝不顯示）</label>
+    <textarea id="srHighlight" style="min-height:76px">${esc(sr.highlight)}</textarea>
+    <p><button id="saveSr">儲存結果頁設定</button></p></div>` : ""}
   <div class="card" style="margin-top:16px"><div class="row between"><h2>${isSelf ? "🪞 看懂自己：題目" : "🔍 識別他人：題目"}（共 ${qs.length} 題）</h2><button id="addQ">＋ 新增題目</button></div>
     <p class="muted">${isSelf ? "每題四個行為描述，各自對應一種風格；填答者選出「最像」與「最不像」。" : "每題四個行為線索，各自對應一種風格；填答者選出最符合該人的一項。"}修改後請按該題的「儲存」。</p>
     <div id="qlist">${qs.map((q, i) => qCard(q, i, qs.length)).join("")}</div></div>`;
   if (isSelf) $("#saveCfg").onclick = e => busy(e.target, async () => {
     await A("admin_update_config", { patch: { randomize: $("#cRand").checked, show_results: $("#cShow").checked, secondary_gap: +$("#cGap").value || 0 } }); toast("已儲存設定");
+  });
+  if (isSelf) $("#saveSr").onclick = e => busy(e.target, async () => {
+    await A("admin_upsert_site", { p_key: "self_result", p_data: { feedbackEnabled: $("#srFeedback").checked, highlight: $("#srHighlight").value.trim() } });
+    toast("已儲存結果頁設定");
   });
   $("#addQ").onclick = () => { $("#qlist").insertAdjacentHTML("beforeend", qCard({ id: "", prompt: "", options: TYPES.map(t => ({ text: "", type: t })), sort: (qs.at(-1)?.sort ?? 0) + 10 }, qs.length, qs.length + 1)); $("#qlist").lastElementChild.scrollIntoView({ behavior: "smooth" }); };
   const list = $("#qlist");

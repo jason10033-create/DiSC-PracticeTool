@@ -642,6 +642,14 @@ const DEFAULT_INTRO = {
 const getIntro = (map, kind) => ({ ...DEFAULT_INTRO[kind], ...((map && map["intro_" + kind]) || {}) });
 
 /* 「看懂自己」結果準確度回饋（前台滑桿／後台列表共用） */
-const RATE_LABELS = { 1: "非常不準確", 2: "不太準確", 3: "普通", 4: "大多準確", 5: "非常準確" };
+const RATE_LABELS = { 1: "非常不準確", 2: "不太準確", 3: "不確定", 4: "大多準確", 5: "非常準確" };
+
+/* 「看懂自己」結果頁設定（後台「看懂自己 → 題目與設定」可調整；key: self_result）
+   feedbackEnabled＝是否顯示「評估結果的準確度回饋」；highlight＝回饋下方的重點提示文字（留空＝不顯示） */
+const DEFAULT_SELF_RESULT = {
+  feedbackEnabled: true,
+  highlight: "**看懂自己只是第一步，參加工作坊和大家一起共學掌握完整的 DiSC 工具！**"
+};
+const getSelfResult = map => ({ ...DEFAULT_SELF_RESULT, ...((map && map["self_result"]) || {}) });
 
 initTheme();

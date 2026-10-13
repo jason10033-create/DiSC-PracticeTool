@@ -205,7 +205,7 @@ async function selfSubmit() {
 function feedbackBlock(r) {
   const val = r.accuracy_feedback || 3, locked = !!r.accuracy_feedback;
   return `<div class="rate-box">
-    <h3>評估結果的準確度回饋</h3>
+    <h3>評估結果的準確度回饋（與你對自己的理解相比）</h3>
     <div class="rate-current" id="rateVal">${val}・${RATE_LABELS[val]}</div>
     <input type="range" id="rateInput" min="1" max="5" step="1" value="${val}" ${locked ? "disabled" : ""}>
     <div class="rate-labels"><span>1 非常不準確</span><span>5 非常準確</span></div>
@@ -265,6 +265,7 @@ async function selfResult(r, saved) {
   const tp = getType(adaptMap, p), ts = s ? getType(adaptMap, s) : null;
   const sec = s ? `<div class="box t-${s}"><h3>輔型：${TLABEL[s]} ${TNAME[s]}</h3><p>${esc(ts.summary)}</p></div>` : "";
   const pat = analyzeScores(r.scores), close = pat.kind !== "single" ? closeResult(r, pat) : null;
+  const sr = getSelfResult(SITE), hl = (sr.highlight || "").trim(); // 後台「看懂自己 → 題目與設定」可調整
   const head = close
     ? `<div class="row" style="gap:20px"><div class="styleBadge">${close.badge}</div><div><h2 style="margin:0">${esc(close.title)}</h2><p class="muted" style="margin:0">${esc(close.tagline)}</p></div></div>`
     : `<div class="row" style="gap:20px"><div class="styleBadge t-${p}" style="color:var(--c)">${styleLabel(r.style)}</div>
@@ -278,11 +279,12 @@ async function selfResult(r, saved) {
     <div class="grid c2" style="margin-top:20px;align-items:center"><div class="circleWrap">${circleSvg(r.scores)}</div><div>${barsHtml(r.scores)}<p class="muted small">分數 0–100，越高代表該傾向越明顯。</p></div></div>
     <div class="tips" style="margin-top:16px">${tips}</div>
     <p class="muted small" style="margin-top:14px">最後測評時間：${new Date(r.updated_at).toLocaleString("zh-TW")}。DiSC 描述的是行為傾向，會隨情境變化，結果僅供參考。</p>
-    ${feedbackBlock(r)}
+    ${sr.feedbackEnabled ? feedbackBlock(r) : ""}
+    ${hl ? `<div class="hl-note">${md(hl)}</div>` : ""}
     <div class="row between" style="margin-top:16px"><button class="ghost" id="redo">重新測驗</button>
       <a class="btn" href="#/adapt">前往彈性調適 →</a></div></div></div>`;
   $("#redo").onclick = () => { if (confirm("重新測驗會覆蓋原本的紀錄，確定嗎？")) selfIntro(); };
-  bindFeedback(clientId);
+  if (sr.feedbackEnabled) bindFeedback(clientId);
 }
 
 /* ---------- 03 識別他人 ---------- */
