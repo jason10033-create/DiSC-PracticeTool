@@ -36,7 +36,6 @@ async function route() {
   const [, page, arg] = (location.hash || "#/").split("/");
   window.scrollTo(0, 0);
   try {
-    if (page === "demo" && window.demoRoute) return window.demoRoute((location.hash || "").split("/").slice(2)); // 預覽版專用（?preview）
     if (!page) return home();
     const f = FEATURES.find(x => x.id === page);
     if (!f) return home();
@@ -514,7 +513,6 @@ function renderTool() {
     const [c, rows] = await Promise.all([rpc("get_config"), select("site_content", "select=key,data")]);
     cfg = c; SITE = Object.fromEntries(rows.map(r => [r.key, r.data])); HOME = getHome(SITE); mascotInit(SITE); applyHome();
   } catch (e) { console.error(e); mascotInit({}); }
-  if (/[?&]preview\b/.test(location.search)) await new Promise(ok => { const s = document.createElement("script"); s.src = "js/preview.js"; s.onload = s.onerror = ok; document.body.appendChild(s); }); // 預覽版專用
   await route();
   // 載入動畫至少播完一輪（拆開→重組；吉祥物開啟時再多等一下讓四隻吉祥物登場），再淡出
   const wait = Math.max(0, 1900 - (performance.now() - t0));
