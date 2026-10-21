@@ -78,7 +78,7 @@ async function vSettings() {
 /* ---------- 首頁內容 ---------- */
 async function vHome() {
   const rows = await select("site_content", "key=eq.home&select=key,data");
-  const custom = rows.length > 0, H = getHome(Object.fromEntries(rows.map(r => [r.key, r.data]))), c = H.copyright;
+  const custom = rows.length > 0, H = getHome(Object.fromEntries(rows.map(r => [r.key, r.data]))), c = H.copyright, h = H.copyrightHome;
   const F = { tools: ["01", "t-D"], self: ["02", "t-I"], others: ["03", "t-S"], adapt: ["04", "t-C"] };
   $("#view").innerHTML = `<div class="card"><div class="row between"><h2>🏠 前台首頁內容 ${custom ? `<span class="pill" style="background:var(--brand)">已自訂</span>` : `<span class="small muted">（預設）</span>`}</h2>
     <a class="btn ghost sm" href="index.html" target="_blank" rel="noopener">開啟前台預覽 ↗</a></div>
@@ -95,16 +95,23 @@ async function vHome() {
     <h3 style="margin-top:20px">其他文字</h3>
     <label class="f">解鎖視窗提示文字</label><input type="text" data-k="lockTitleHint" value="${esc(H.lockTitleHint)}">
     <label class="f">頁尾「管理後台」連結文字</label><input type="text" data-k="adminLinkText" value="${esc(H.adminLinkText)}" style="max-width:260px">
-    <h3 style="margin-top:20px">©️ 著作權說明區塊</h3>
-    <label class="switch"><input type="checkbox" id="cpOn" ${c.enabled ? "checked" : ""}> 在首頁頁尾顯示著作權說明</label>
-    <label class="f">標題（可留空）</label><input type="text" id="cpTitle" value="${esc(c.title)}">
-    <label class="f">內容（支援 **粗體**、- 清單、[文字](網址)）</label><textarea id="cpText" style="min-height:110px">${esc(c.text)}</textarea>
+    <h3 style="margin-top:20px">©️ 頁尾版權文字</h3>
+    <p class="muted small" style="margin:0">頁面最下方的版權文字分兩種：首頁（主頁面）一種，其他功能頁面（解密工具、看懂自己、識別他人、彈性調適）共用另一種。</p>
+    <div class="box" style="margin-top:10px"><b>首頁（主頁面）</b>
+      <label class="switch" style="margin-top:6px"><input type="checkbox" id="cpHomeOn" ${h.enabled ? "checked" : ""}> 顯示版權文字</label>
+      <label class="f">標題（可留空）</label><input type="text" id="cpHomeTitle" value="${esc(h.title)}">
+      <label class="f">內容（支援 **粗體**、- 清單、[文字](網址)）</label><textarea id="cpHomeText" style="min-height:90px">${esc(h.text)}</textarea></div>
+    <div class="box" style="margin-top:10px"><b>其他功能頁面</b>
+      <label class="switch" style="margin-top:6px"><input type="checkbox" id="cpOn" ${c.enabled ? "checked" : ""}> 顯示版權文字</label>
+      <label class="f">標題（可留空）</label><input type="text" id="cpTitle" value="${esc(c.title)}">
+      <label class="f">內容（支援 **粗體**、- 清單、[文字](網址)）</label><textarea id="cpText" style="min-height:90px">${esc(c.text)}</textarea></div>
     <div class="row" style="margin-top:16px"><button id="save">💾 儲存首頁內容</button><button class="ghost" id="reset" ${custom ? "" : "disabled"}>還原預設</button></div></div>`;
   $("#save").onclick = e => busy(e.target, async () => {
     const g = k => $(`[data-k="${k}"]`).value.trim(), features = {};
     Object.keys(F).forEach(k => features[k] = { name: $(`[data-fk="${k}"][data-f="name"]`).value.trim(), desc: $(`[data-fk="${k}"][data-f="desc"]`).value.trim() });
     const data = { siteName: g("siteName"), heroTitle: g("heroTitle"), heroText: g("heroText"), stepLabel: g("stepLabel"), lockTitleHint: g("lockTitleHint"), adminLinkText: g("adminLinkText"), features,
-      copyright: { enabled: $("#cpOn").checked, title: $("#cpTitle").value.trim(), text: $("#cpText").value.trim() } };
+      copyright: { enabled: $("#cpOn").checked, title: $("#cpTitle").value.trim(), text: $("#cpText").value.trim() },
+      copyrightHome: { enabled: $("#cpHomeOn").checked, title: $("#cpHomeTitle").value.trim(), text: $("#cpHomeText").value.trim() } };
     if (!data.siteName || !data.heroTitle) return toast("網站名稱與主視覺標題不可空白");
     await A("admin_upsert_site", { p_key: "home", p_data: data }); toast("已儲存"); vHome();
   });

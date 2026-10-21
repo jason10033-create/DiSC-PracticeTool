@@ -25,7 +25,12 @@ let HOME = getHome({});
 function applyHome() {
   FEATURES.forEach(f => Object.assign(f, HOME.features[f.id]));
   $("#brandName").textContent = HOME.siteName; document.title = HOME.siteName;
-  const c = HOME.copyright;
+  renderFooter();
+}
+/* 頁尾版權文字：首頁（主頁面）與其他功能頁面各用一種，可在後台「首頁內容」分別修改 */
+let footerHome = true;
+function renderFooter() {
+  const c = footerHome ? HOME.copyrightHome : HOME.copyright;
   $("#siteFooter").innerHTML =
     (c.enabled && (c.title || c.text) ? `<div class="copyright-plain">${c.title ? `<b>${esc(c.title)}</b> ` : ""}${md(c.text || "")}</div>` : "") +
     `<p class="muted small" style="text-align:center"><a href="admin.html">${esc(HOME.adminLinkText)}</a></p>`;
@@ -35,9 +40,12 @@ function applyHome() {
 async function route() {
   const [, page, arg] = (location.hash || "#/").split("/");
   window.scrollTo(0, 0);
+  const pf = FEATURES.find(x => x.id === page);
+  footerHome = !pf || !isUnlocked(pf.id); // 首頁，或被鎖住而退回首頁畫面時，都用首頁的版權文字
+  renderFooter();
   try {
     if (!page) return home();
-    const f = FEATURES.find(x => x.id === page);
+    const f = pf;
     if (!f) return home();
     if (!isUnlocked(f.id)) { home(); return askUnlock(f); }
     if (page === "tools") return arg ? toolsArticle(arg) : toolsList();

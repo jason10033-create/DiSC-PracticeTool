@@ -604,13 +604,15 @@ const DEFAULT_HOME = {
   },
   lockTitleHint: "此功能尚未開放，請輸入講師提供的密碼解鎖。",
   adminLinkText: "管理後台",
-  copyright: { enabled: true, title: "著作權說明", text: "© 2026 版權所有。本網站內容僅供內部學習使用，未經授權請勿轉載、重製或散布。" }
+  // 頁尾版權文字有兩種：copyright＝其他功能頁面；copyrightHome＝首頁（主頁面）
+  copyright: { enabled: true, title: "", text: "© 2026 JasonCH Kuo. Learning & Development Dept., Moxa. All rights reserved." },
+  copyrightHome: { enabled: true, title: "", text: "本網站為Everything DiSC® Certified Trainer 以官方授權內容為基礎所開發製作之教材，僅供Moxa 內部工作坊學習用途，未經同意請勿對外轉載、重製或散佈。" }
 };
 function getHome(map) {
   const d = DEFAULT_HOME, h = (map && map["home"]) || {};
   const features = {};
   Object.keys(d.features).forEach(k => features[k] = { ...d.features[k], ...((h.features || {})[k] || {}) });
-  return { ...d, ...h, features, copyright: { ...d.copyright, ...(h.copyright || {}) } };
+  return { ...d, ...h, features, copyright: { ...d.copyright, ...(h.copyright || {}) }, copyrightHome: { ...d.copyrightHome, ...(h.copyrightHome || {}) } };
 }
 
 /* ============ 測評開頭文字（後台「開頭文字」可覆寫；key: intro_self / intro_others）============ */
