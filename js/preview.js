@@ -41,6 +41,6 @@
       <div class="card"><h2>看懂自己：結果頁</h2>${Object.keys(SC).map(k => btn("#/demo/self/" + k, LABEL[k])).join("")}</div>
       <div class="card"><h2>識別他人：結果頁</h2>${Object.keys(OTH).map(k => btn("#/demo/others/" + k, OTH[k].label)).join("")}</div>
       <div class="card"><h2>彈性調適</h2>${btn("#/demo/adapt/types", "基本應對原則（選一隻吉祥物）")}${btn("#/demo/adapt/tool", "風格應對神器（雙方面對面）")}</div>
-      <div class="card"><h2>其他</h2><p class="muted">首頁：主視覺右側為四隻吉祥物協作圖。結果小卡：進入任一「看懂自己」結果頁，按「下載結果小卡」。</p></div>`;
+      <div class="card"><h2>其他</h2><p class="muted">結果小卡：進入任一「看懂自己」結果頁，按「下載結果小卡」。</p></div>`;
   };
 })();

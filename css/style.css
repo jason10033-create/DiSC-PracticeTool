@@ -256,17 +256,9 @@ table.tbl input[type=checkbox] { width:18px; height:18px; accent-color:var(--bra
 :root[data-theme="dark"] .mk .mk-l { display:none; }
 :root[data-theme="dark"] .mk .mk-d { display:block; filter:drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
 .mk.flip img { transform:scaleX(-1); }
-.mk-xs { --base:44px; } .mk-sm { --base:64px; } .mk-md { --base:96px; } .mk-lg { --base:150px; } .mk-xl { --base:200px; }
+.mk-xs { --base:44px; } .mk-tp { --base:88px; } .mk-sm { --base:64px; } .mk-md { --base:96px; } .mk-lg { --base:150px; } .mk-xl { --base:200px; }
 @media (hover:hover) and (prefers-reduced-motion:no-preference) { .mk-pick:hover .mk { transform:translateY(-4px) rotate(-5deg); } }
 
-/* 首頁主視覺：文字在左、四隻吉祥物協作圖在正右方 */
-.hero.has-team { display:flex; align-items:center; gap:20px; padding-right:36px; }
-.hero-text { flex:1; min-width:0; }
-.hero-team { flex:none; height:220px; width:auto; margin:-14px 0; filter:drop-shadow(0 6px 10px rgba(10,15,40,.3)); }
-@media (max-width:760px) {
-  .hero.has-team { flex-direction:column; align-items:flex-start; padding-right:28px; gap:4px; }
-  .hero-team { height:170px; align-self:center; margin:6px 0 -8px; }
-}
 
 /* 結果頁：吉祥物舞台（第 1 隻大、其餘小）與口頭禪對話框 */
 .mk-stage { display:inline-flex; align-items:flex-end; padding:12px 16px 8px; border-radius:20px; background:var(--cs,var(--surface2)); flex:none; --base:150px; }
@@ -280,16 +272,14 @@ table.tbl input[type=checkbox] { width:18px; height:18px; accent-color:var(--bra
 .mk-say.r::before { left:auto; right:-7px; border-right:7px solid transparent; border-left-color:var(--cs,var(--surface2)); border-left-width:7px; }
 .res-head { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
 .res-head .res-text { flex:1; min-width:220px; }
-/* 看懂自己：吉祥物在長條圖右側 */
-.bars-mk { display:flex; gap:14px; align-items:center; flex-wrap:wrap; }
-.bars-mk .bars-col { flex:1 1 230px; min-width:0; }
 
 /* 風格應對神器：雙方面對面 */
 .mk-duo { display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:end; margin-bottom:14px; }
 .mk-duo .side { display:flex; flex-direction:column; align-items:center; gap:6px; }
-.mk-duo .side .mk-stage { --base:150px; }
+.mk-duo .side .mk-stage { --base:100px; }
+.mk-duo .side .pill { font-size:24px; padding:3px 20px; }
 .mk-duo .mid { font-size:30px; color:var(--muted); padding-bottom:64px; line-height:1; }
-@media (max-width:560px) { .mk-duo .side .mk-stage { --base:96px; padding:10px 10px 6px; } }
+@media (max-width:560px) { .mk-duo .side .mk-stage { --base:64px; padding:8px 8px 5px; } .mk-duo .side .pill { font-size:20px; padding:3px 14px; } }
 
 /* 基本應對原則：吉祥物小、風格文字大 */
 .mk-picks { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
@@ -311,9 +301,7 @@ h2.mk-title { font-size:30px; }
   border-radius:99px; padding:5px 6px 5px 14px; box-shadow:var(--shadow); font-size:13px; font-weight:700; }
 #mkSwitch a { text-decoration:none; padding:5px 12px; border-radius:99px; color:var(--text); background:var(--surface2); }
 #mkSwitch a.on { background:var(--brand); color:var(--brand-ink); }
-.grid.c2.g-mk { grid-template-columns:230px 1fr; }
-.g-mk .circleWrap { max-width:230px; }
-.bars-mk { flex-wrap:nowrap; }
-.bars-mk .bars-col { flex:1 1 0; }
-.bars-mk .bar-row { grid-template-columns:72px 1fr 34px; gap:8px; }
 @media (max-width:640px) { .grid.c2.g-mk { grid-template-columns:1fr; } .bars-mk { flex-wrap:wrap; } .bars-mk .bars-col { flex:1 1 230px; } }
+/* 看懂自己：主標題風格（左）與吉祥物（右）排在同一區 */
+.head-mk { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
+.head-mk > .row { flex:1 1 280px; }

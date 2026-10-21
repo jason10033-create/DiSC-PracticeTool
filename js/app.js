@@ -71,9 +71,8 @@ function askUnlock(f) {
 /* ---------- 首頁 ---------- */
 function home() {
   app.innerHTML = `
-  <section class="hero${MASCOT_ON ? " has-team" : ""}">${MASCOT_ON ? `<div class="hero-text"><h1>${esc(HOME.heroTitle)}</h1><p>${esc(HOME.heroText)}</p></div>
-    <img class="hero-team" src="assets/mascot/team.webp" alt="老鷹、鸚鵡、鴿子、貓頭鷹四隻吉祥物站在一起，象徵不同風格攜手協作" width="293" height="220">`
-    : `<h1>${esc(HOME.heroTitle)}</h1><p>${esc(HOME.heroText)}</p>`}</section>
+  <section class="hero"><h1>${esc(HOME.heroTitle)}</h1>
+    <p>${esc(HOME.heroText)}</p></section>
   <div class="grid c2" style="margin-top:20px">${FEATURES.map(f => {
     const locked = !isUnlocked(f.id);
     return `<button class="feature t-${f.t} ${locked ? "locked" : ""}" data-f="${f.id}">
@@ -269,16 +268,25 @@ function mascotPlan(r, pat) {
 /* 結果小卡（1080×1350 PNG）：用 canvas 畫出來，不經過伺服器 */
 const loadImg = src => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = src; });
 async function resultCard(c) {
-  const W = 1080, HH = 1160, F = `"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif`;
+  const W = 1080, F = `"Noto Sans TC","Microsoft JhengHei","PingFang TC",system-ui,sans-serif`;
   const COL = { D: "#e0463d", I: "#f2a93b", S: "#3da35d", C: "#3f7fd1" }, SOFT = { D: "#fde8e6", I: "#fef3dc", S: "#e2f4e8", C: "#e3edfa" };
-  const cv = document.createElement("canvas"); cv.width = W; cv.height = HH; const g = cv.getContext("2d");
+  const cv = document.createElement("canvas"); const g = cv.getContext("2d");
   const imgs = await Promise.all(c.types.map(t => loadImg(`assets/mascot/${t}.webp`)));
   const rr = (x, y, w, h, r) => { g.beginPath(); g.moveTo(x + r, y); g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r); g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r); g.closePath(); };
   const wrap = (text, maxW, font, maxLines) => { g.font = font; const out = []; let cur = ""; for (const ch of text) { if (g.measureText(cur + ch).width > maxW) { out.push(cur); cur = ch; } else cur += ch; } if (cur) out.push(cur); if (out.length > maxLines) { out.length = maxLines; out[maxLines - 1] = out[maxLines - 1].slice(0, -1) + "…"; } return out; };
   const main = c.equal ? "#5b4bdb" : COL[c.types[0]];
+  // 先量好版面：標題風格與說明文字在左、吉祥物在右，放在同一個色塊裡；色塊高度與整張小卡高度依文字行數決定
+  const base = 205, sc = i => c.equal ? 0.62 : i === 0 ? 1 : 0.62, gap = -17;
+  const ws = imgs.map((im, i) => base * sc(i) * im.width / im.height);
+  const mkW = ws.reduce((a, b) => a + b, 0) + gap * (imgs.length - 1);
+  const tw = Math.max(380, 888 - 40 - mkW - 56);
+  const titleL = wrap(c.title, tw, `800 38px ${F}`, 3), tagL = wrap(c.tagline, tw, `500 26px ${F}`, 3);
+  const tileY = 252, titleY = tileY + 196, tagY = titleY + (titleL.length - 1) * 48 + 46, lastY = tagY + (tagL.length - 1) * 36;
+  const tileH = Math.max(base + 48, lastY - tileY + 34), by = tileY + tileH + 72, footY = by + 3 * 48 + 76, HH = footY + 74;
+  cv.width = W; cv.height = HH;
   g.fillStyle = "#f4f5fb"; g.fillRect(0, 0, W, HH);
-  g.save(); g.shadowColor = "rgba(30,40,90,.14)"; g.shadowBlur = 40; g.shadowOffsetY = 12; g.fillStyle = "#fff"; rr(40, 40, 1000, 1080, 44); g.fill(); g.restore();
-  g.save(); rr(40, 40, 1000, 1080, 44); g.clip();
+  g.save(); g.shadowColor = "rgba(30,40,90,.14)"; g.shadowBlur = 40; g.shadowOffsetY = 12; g.fillStyle = "#fff"; rr(40, 40, 1000, HH - 80, 44); g.fill(); g.restore();
+  g.save(); rr(40, 40, 1000, HH - 80, 44); g.clip();
   ["D", "I", "S", "C"].forEach((t, i) => { g.fillStyle = COL[t]; g.fillRect(40 + i * 250, 40, 250, 16); });
   g.restore();
   // 標頭
@@ -287,20 +295,14 @@ async function resultCard(c) {
   let nm = `${c.name} 的 DiSC 風格`, fs = 50; g.fillStyle = "#1d2233";
   do { g.font = `800 ${fs}px ${F}`; fs -= 2; } while (g.measureText(nm).width > 880 && fs > 28);
   g.fillText(nm, 96, 218);
-  // 吉祥物舞台
-  g.fillStyle = c.equal ? "#eef0f8" : SOFT[c.types[0]]; rr(96, 252, 888, 260, 40); g.fill();
-  const base = 205, ground = 496, sc = i => c.equal ? 0.62 : i === 0 ? 1 : 0.62;
-  const ws = imgs.map((im, i) => base * sc(i) * im.width / im.height), gap = -17;
-  const total = ws.reduce((a, b) => a + b, 0) + gap * (imgs.length - 1);
-  let x = 96 + (888 - total) / 2;
-  imgs.forEach((im, i) => { const h = base * sc(i); g.drawImage(im, x, ground - h, ws[i], h); x += ws[i] + gap; });
-  // 風格與說明
-  g.fillStyle = main; g.font = `900 124px ${F}`; g.fillText(c.label, 96, 664);
-  g.fillStyle = "#1d2233"; g.font = `800 40px ${F}`; wrap(c.title, 888, `800 40px ${F}`, 2).forEach((l, i) => g.fillText(l, 96, 722 + i * 52));
-  const ty = 722 + (wrap(c.title, 888, `800 40px ${F}`, 2).length) * 52 + 4;
-  g.fillStyle = "#667085"; wrap(c.tagline, 888, `500 28px ${F}`, 2).forEach((l, i) => { g.font = `500 28px ${F}`; g.fillText(l, 96, ty + i * 40); });
+  // 色塊：左＝風格代號、標題、說明；右＝吉祥物
+  g.fillStyle = c.equal ? "#eef0f8" : SOFT[c.types[0]]; rr(96, tileY, 888, tileH, 40); g.fill();
+  g.textAlign = "left"; g.fillStyle = main; g.font = `900 112px ${F}`; g.fillText(c.label, 136, tileY + 140);
+  g.fillStyle = "#1d2233"; g.font = `800 38px ${F}`; titleL.forEach((l, i) => g.fillText(l, 136, titleY + i * 48));
+  g.fillStyle = "#667085"; g.font = `500 26px ${F}`; tagL.forEach((l, i) => g.fillText(l, 136, tagY + i * 36));
+  let x = 984 - 36 - mkW;
+  imgs.forEach((im, i) => { const h = base * sc(i); g.drawImage(im, x, tileY + tileH - 18 - h, ws[i], h); x += ws[i] + gap; });
   // 四個分數
-  const by = 856;
   CIRCLE.forEach((t, i) => {
     const y = by + i * 48, v = c.scores[t];
     g.fillStyle = COL[t]; g.font = `800 28px ${F}`; g.fillText(`${TLABEL[t]} ${TNAME[t]}`, 96, y + 8);
@@ -308,7 +310,7 @@ async function resultCard(c) {
     g.fillStyle = COL[t]; rr(330, y - 18, Math.max(26, 560 * v / 100), 26, 13); g.fill();
     g.fillStyle = "#1d2233"; g.font = `800 28px ${F}`; g.fillText(String(v), 912, y + 8);
   });
-  g.fillStyle = "#98a2b3"; g.font = `500 22px ${F}`; g.textAlign = "center"; g.fillText("DiSC 描述的是行為傾向，會隨情境變化，結果僅供參考。", W / 2, 1086); g.textAlign = "left";
+  g.fillStyle = "#98a2b3"; g.font = `500 22px ${F}`; g.textAlign = "center"; g.fillText("DiSC 描述的是行為傾向，會隨情境變化，結果僅供參考。", W / 2, footY); g.textAlign = "left";
   const url = cv.toDataURL("image/png"), fn = `DiSC-${c.name.replace(/[\\/:*?"<>|\s]+/g, "") || "結果"}.png`;
   const m = document.createElement("div"); m.className = "modal";
   m.innerHTML = `<div class="card wide"><h2>我的 DiSC 結果小卡</h2><img class="cardpv" src="${url}" alt="${esc(c.name)} 的 DiSC 結果小卡">
@@ -329,12 +331,11 @@ async function selfResult(r, saved, demo) {
     ? `<div class="row" style="gap:20px"><div class="styleBadge">${close.badge}</div><div><h2 style="margin:0">${esc(close.title)}</h2><p class="muted" style="margin:0">${esc(close.tagline)}</p></div></div>`
     : `<div class="row" style="gap:20px"><div class="styleBadge t-${p}" style="color:var(--c)">${styleLabel(r.style)}</div>
       <div><h2 style="margin:0">${TNAME[p]}${s ? `・帶有${TNAME[s]}傾向` : ""}</h2><p class="muted" style="margin:0">${esc(PROFILE[p].short)}</p></div></div>`;
-  // 吉祥物：放在長條圖右側（縮小），大小依主次（單一主型＝主型大＋輔型小；雙型並重＝依分數高低）；三個風格以上不顯示
+  // 吉祥物：和主標題風格排在同一區（文字在左、圖案在右，縮小）；大小依主次（單一主型＝主型大＋輔型小；雙型並重＝依分數高低）；三個風格以上不顯示
   const plan = mascotPlan(r, pat);
-  const head = headRow;
   const mkSide = MASCOT_ON && !plan.equal && plan.types.length <= 2 ? mkStage(plan.types, { sm: true }) : "";
-  const barsCol = `${barsHtml(r.scores)}<p class="muted small">分數 0–100，越高代表該傾向越明顯。</p>`;
-  const barsBlock = mkSide ? `<div class="bars-mk"><div class="bars-col">${barsCol}</div>${mkSide}</div>` : `<div>${barsCol}</div>`;
+  const head = mkSide ? `<div class="head-mk">${headRow}${mkSide}</div>` : headRow;
+  const barsBlock = `<div>${barsHtml(r.scores)}<p class="muted small">分數 0–100，越高代表該傾向越明顯。</p></div>`;
   const card = { name: r.user_name, types: plan.types, equal: plan.equal, scores: r.scores,
     label: close ? plan.types.map(t => TLABEL[t]).join(" ") : styleLabel(r.style),
     title: close ? close.title : `${TNAME[p]}${s ? `・帶有${TNAME[s]}傾向` : ""}`, tagline: close ? close.tagline : PROFILE[p].short };
@@ -344,7 +345,7 @@ async function selfResult(r, saved, demo) {
   app.innerHTML = `<div class="narrow" style="margin:auto">${back()}<div class="card">
     <p class="muted">${esc(r.user_name)} 的 DiSC 風格</p>
     ${head}
-    <div class="grid c2${mkSide ? " g-mk" : ""}" style="margin-top:20px;align-items:center"><div class="circleWrap">${circleSvg(r.scores)}</div>${barsBlock}</div>
+    <div class="grid c2" style="margin-top:20px;align-items:center"><div class="circleWrap">${circleSvg(r.scores)}</div>${barsBlock}</div>
     <div class="tips" style="margin-top:16px">${tips}</div>
     <p class="muted small" style="margin-top:14px">最後測評時間：${new Date(r.updated_at).toLocaleString("zh-TW")}。DiSC 描述的是行為傾向，會隨情境變化，結果僅供參考。</p>
     ${sr.feedbackEnabled && !demo ? feedbackBlock(r) : ""}
@@ -436,14 +437,14 @@ function renderAdapt() {
 }
 function renderTypes() {
   const typeCard = t => { const d = getType(adaptMap, t); return `<div class="card t-${t}" style="border-top:6px solid var(--c);margin-top:16px">${MASCOT_ON
-    ? `<div class="row between" style="flex-wrap:nowrap;align-items:center;margin-bottom:6px"><h2 class="mk-title" style="color:var(--c);margin:0">${TLABEL[t]} ${TNAME[t]}</h2><div class="mk-chat">${mkSay(t, "r")}${mk(t, { size: "xs" })}</div></div>`
+    ? `<div class="row between" style="flex-wrap:nowrap;align-items:center;margin-bottom:6px"><h2 class="mk-title" style="color:var(--c);margin:0">${TLABEL[t]} ${TNAME[t]}</h2><div class="mk-chat">${mkSay(t, "r")}${mk(t, { size: "tp" })}</div></div>`
     : `<h2 style="color:var(--c)">${TLABEL[t]} ${TNAME[t]}</h2>`}<p>${esc(d.summary)}</p>
       <p><b>在乎：</b>${esc(d.want)}<br><b>壓力來源：</b>${esc(d.stress)}</p>
       <h3>✅ 這樣溝通</h3><ul>${d.dos.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
       <h3>⚠️ 避免</h3><ul>${d.donts.map(x => `<li>${esc(x)}</li>`).join("")}</ul>
       <div class="box"><b>💡 ${esc(d.tip)}</b></div></div>`; };
   $("#adaptBody").innerHTML = `<div class="card"><p class="muted" style="margin:0 0 10px">請選擇一種 DiSC 風格，查看基本應對原則：</p>
-    ${MASCOT_ON ? `<div class="mk-picks">${TYPES.map(t => `<button class="mk-pick t-${t} ${typesSel === t ? "on" : ""}" data-tsel="${t}">${mk(t, { size: "xs" })}<b>${TLABEL[t]} ${TNAME[t]}</b></button>`).join("")}</div>`
+    ${MASCOT_ON ? `<div class="mk-picks">${TYPES.map(t => `<button class="mk-pick t-${t} ${typesSel === t ? "on" : ""}" data-tsel="${t}">${mk(t, { size: "tp" })}<b>${TLABEL[t]} ${TNAME[t]}</b></button>`).join("")}</div>`
       : `<div class="row" style="gap:8px">${TYPES.map(t => `<button class="chip t-${t} ${typesSel === t ? "on" : ""}" data-tsel="${t}">${TLABEL[t]} ${TNAME[t]}</button>`).join("")}</div>`}</div>
     ${typesSel ? typeCard(typesSel) : `<div class="card" style="margin-top:16px;text-align:center"><p class="muted">請先在上方選擇一種風格。</p></div>`}`;
   $$("[data-tsel]").forEach(b => b.onclick = () => { typesSel = b.dataset.tsel; renderTypes(); });
