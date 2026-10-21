@@ -265,8 +265,8 @@ table.tbl input[type=checkbox] { width:18px; height:18px; accent-color:var(--bra
 .mk-stage .mk + .mk { margin-left:-14px; }
 .mk-stage.rev { flex-direction:row-reverse; }
 .mk-stage.rev .mk + .mk { margin-left:0; margin-right:-14px; }
-.mk-stage.sm { --base:75px; padding:6px 10px 4px; border-radius:14px; }
-.mk-stage.sm .mk + .mk { margin-left:-8px; }
+.mk-stage.sm { --base:112px; padding:9px 15px 6px; border-radius:18px; }
+.mk-stage.sm .mk + .mk { margin-left:-12px; }
 .mk-say { position:relative; display:inline-block; margin-top:10px; padding:7px 14px; border-radius:14px; font-size:14px; font-weight:700; background:var(--cs,var(--surface2)); color:var(--text); }
 .mk-say::before { content:""; position:absolute; left:-7px; top:50%; margin-top:-7px; border:7px solid transparent; border-left:0; border-right-color:var(--cs,var(--surface2)); }
 .mk-say.r::before { left:auto; right:-7px; border-right:7px solid transparent; border-left-color:var(--cs,var(--surface2)); border-left-width:7px; }
@@ -301,7 +301,9 @@ h2.mk-title { font-size:30px; }
   border-radius:99px; padding:5px 6px 5px 14px; box-shadow:var(--shadow); font-size:13px; font-weight:700; }
 #mkSwitch a { text-decoration:none; padding:5px 12px; border-radius:99px; color:var(--text); background:var(--surface2); }
 #mkSwitch a.on { background:var(--brand); color:var(--brand-ink); }
-/* 看懂自己：主標題風格（左）與吉祥物（右）排在同一區 */
-.head-mk { display:flex; align-items:center; justify-content:flex-start; gap:18px; }
-.head-mk > .row { flex:0 1 auto; min-width:0; }
-@media (max-width:560px) { .head-mk { flex-wrap:wrap; } }
+/* 看懂自己：左欄＝主標題風格在圓形圖正上方；右欄＝吉祥物在長條圖正上方（皆置中）*/
+.res-split { margin-top:16px; align-items:start; }
+.res-left .res-title { display:flex; justify-content:center; margin-bottom:14px; }
+.res-left .res-title > .row { justify-content:center; flex-wrap:nowrap; }
+.res-right { display:flex; flex-direction:column; align-items:center; gap:22px; }
+.res-right > div:last-child { align-self:stretch; }

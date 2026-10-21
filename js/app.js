@@ -331,11 +331,16 @@ async function selfResult(r, saved, demo) {
     ? `<div class="row" style="gap:20px"><div class="styleBadge">${close.badge}</div><div><h2 style="margin:0">${esc(close.title)}</h2><p class="muted" style="margin:0">${esc(close.tagline)}</p></div></div>`
     : `<div class="row" style="gap:20px"><div class="styleBadge t-${p}" style="color:var(--c)">${styleLabel(r.style)}</div>
       <div><h2 style="margin:0">${TNAME[p]}${s ? `・帶有${TNAME[s]}傾向` : ""}</h2><p class="muted" style="margin:0">${esc(PROFILE[p].short)}</p></div></div>`;
-  // 吉祥物：和主標題風格排在同一區（文字在左、圖案在右，縮小）；大小依主次（單一主型＝主型大＋輔型小；雙型並重＝依分數高低）；三個風格以上不顯示
+  // 吉祥物：有吉祥物時分成左右兩欄——左欄＝主標題風格（置中）在圓形圖正上方；右欄＝吉祥物（置中）在長條圖正上方。
+  // 大小依主次（單一主型＝主型大＋輔型小；雙型並重＝依分數高低）；三個風格以上不顯示（維持原本由上而下的排法）
   const plan = mascotPlan(r, pat);
   const mkSide = MASCOT_ON && !plan.equal && plan.types.length <= 2 ? mkStage(plan.types, { sm: true }) : "";
-  const head = mkSide ? `<div class="head-mk">${headRow}${mkSide}</div>` : headRow;
   const barsBlock = `<div>${barsHtml(r.scores)}<p class="muted small">分數 0–100，越高代表該傾向越明顯。</p></div>`;
+  const circleBlock = `<div class="circleWrap">${circleSvg(r.scores)}</div>`;
+  const head = mkSide ? "" : headRow;
+  const split = mkSide
+    ? `<div class="grid c2 res-split"><div class="res-left"><div class="res-title">${headRow}</div>${circleBlock}</div><div class="res-right">${mkSide}${barsBlock}</div></div>`
+    : `<div class="grid c2" style="margin-top:20px;align-items:center">${circleBlock}${barsBlock}</div>`;
   const card = { name: r.user_name, types: plan.types, equal: plan.equal, scores: r.scores,
     label: close ? plan.types.map(t => TLABEL[t]).join(" ") : styleLabel(r.style),
     title: close ? close.title : `${TNAME[p]}${s ? `・帶有${TNAME[s]}傾向` : ""}`, tagline: close ? close.tagline : PROFILE[p].short };
@@ -345,7 +350,7 @@ async function selfResult(r, saved, demo) {
   app.innerHTML = `<div class="narrow" style="margin:auto">${back()}<div class="card">
     <p class="muted">${esc(r.user_name)} 的 DiSC 風格</p>
     ${head}
-    <div class="grid c2" style="margin-top:20px;align-items:center"><div class="circleWrap">${circleSvg(r.scores)}</div>${barsBlock}</div>
+    ${split}
     <div class="tips" style="margin-top:16px">${tips}</div>
     <p class="muted small" style="margin-top:14px">最後測評時間：${new Date(r.updated_at).toLocaleString("zh-TW")}。DiSC 描述的是行為傾向，會隨情境變化，結果僅供參考。</p>
     ${sr.feedbackEnabled && !demo ? feedbackBlock(r) : ""}
