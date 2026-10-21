@@ -301,7 +301,7 @@ h2.mk-title { font-size:30px; }
   border-radius:99px; padding:5px 6px 5px 14px; box-shadow:var(--shadow); font-size:13px; font-weight:700; }
 #mkSwitch a { text-decoration:none; padding:5px 12px; border-radius:99px; color:var(--text); background:var(--surface2); }
 #mkSwitch a.on { background:var(--brand); color:var(--brand-ink); }
-@media (max-width:640px) { .grid.c2.g-mk { grid-template-columns:1fr; } .bars-mk { flex-wrap:wrap; } .bars-mk .bars-col { flex:1 1 230px; } }
 /* 看懂自己：主標題風格（左）與吉祥物（右）排在同一區 */
-.head-mk { display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; }
-.head-mk > .row { flex:1 1 280px; }
+.head-mk { display:flex; align-items:center; justify-content:flex-start; gap:18px; }
+.head-mk > .row { flex:0 1 auto; min-width:0; }
+@media (max-width:560px) { .head-mk { flex-wrap:wrap; } }
