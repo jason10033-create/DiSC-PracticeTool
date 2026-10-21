@@ -248,3 +248,89 @@ table.tbl input[type=checkbox] { width:18px; height:18px; accent-color:var(--bra
 .copyright-plain b { color:var(--text); }
 .copyright-plain p { margin:2px 0; }
 .copyright-plain ul { margin:4px auto; padding-left:20px; text-align:left; display:inline-block; }
+
+/* ===== 吉祥物（老鷹 D／鸚鵡 i／鴿子 S／貓頭鷹 C）===== */
+.mk { display:inline-block; flex:none; line-height:0; height:calc(var(--base,96px) * var(--s,1)); transition:transform .25s cubic-bezier(.3,1.4,.5,1); }
+.mk img { display:block; height:100%; width:auto; filter:drop-shadow(0 3px 5px rgba(20,25,60,.16)); }
+.mk .mk-d { display:none; }
+:root[data-theme="dark"] .mk .mk-l { display:none; }
+:root[data-theme="dark"] .mk .mk-d { display:block; filter:drop-shadow(0 2px 4px rgba(0,0,0,.4)); }
+.mk.sticker .mk-l { display:none !important; } .mk.sticker .mk-d { display:block !important; }
+.mk.flip img { transform:scaleX(-1); }
+.mk-xs { --base:44px; } .mk-sm { --base:64px; } .mk-md { --base:96px; } .mk-lg { --base:150px; } .mk-xl { --base:200px; }
+@keyframes mkBob { 0%,100% { transform:translateY(0); } 50% { transform:translateY(-6px); } }
+@media (prefers-reduced-motion:no-preference) { .mk.bob { animation:mkBob 2.8s ease-in-out infinite; animation-delay:var(--d,0s); } }
+@media (hover:hover) and (prefers-reduced-motion:no-preference) {
+  .feature:hover .mk, .mk-pick:hover .mk { transform:translateY(-6px) rotate(-5deg); }
+}
+
+/* 首頁：主視覺上緣站著四隻、功能卡片右下角各一隻 */
+.hero.has-mk { overflow:visible; margin-top:92px; }
+.hero.has-mk::after { border-radius:inherit; }
+.hero .mk-row { position:absolute; right:40px; bottom:calc(100% - 14px); display:flex; align-items:flex-end; z-index:2; }
+.hero .mk-row .mk { --base:112px; margin-left:-12px; }
+.feature.has-mk { min-height:128px; padding-right:128px; }
+.feature .mk-feature { position:absolute; right:14px; bottom:8px; --base:104px; }
+@media (max-width:640px) {
+  .hero.has-mk { margin-top:80px; }
+  .hero .mk-row { right:50%; transform:translateX(50%); }
+  .hero .mk-row .mk { --base:88px; }
+  .feature.has-mk { padding-right:112px; }
+  .feature .mk-feature { --base:88px; }
+}
+
+/* 結果頁：吉祥物舞台（第 1 隻大、其餘小）與口頭禪對話框 */
+.mk-stage { display:inline-flex; align-items:flex-end; padding:12px 16px 8px; border-radius:20px; background:var(--cs,var(--surface2)); flex:none; --base:150px; }
+.mk-stage .mk + .mk { margin-left:-14px; }
+.mk-stage.rev { flex-direction:row-reverse; }
+.mk-stage.rev .mk + .mk { margin-left:0; margin-right:-14px; }
+.mk-say { position:relative; display:inline-block; margin-top:10px; padding:7px 14px; border-radius:14px; font-size:14px; font-weight:700; background:var(--cs,var(--surface2)); color:var(--text); }
+.mk-say::before { content:""; position:absolute; left:-7px; top:50%; margin-top:-7px; border:7px solid transparent; border-left:0; border-right-color:var(--cs,var(--surface2)); }
+.mk-say.r::before { left:auto; right:-7px; border-right:7px solid transparent; border-left-color:var(--cs,var(--surface2)); border-left-width:7px; }
+.res-head { display:flex; gap:20px; align-items:center; flex-wrap:wrap; }
+.res-head .res-text { flex:1; min-width:220px; }
+
+/* 風格應對神器：雙方面對面 */
+.mk-duo { display:grid; grid-template-columns:1fr auto 1fr; gap:8px; align-items:end; margin-bottom:14px; }
+.mk-duo .side { display:flex; flex-direction:column; align-items:center; gap:6px; }
+.mk-duo .side .mk-stage { --base:150px; }
+.mk-duo .mid { font-size:30px; color:var(--muted); padding-bottom:64px; line-height:1; }
+@media (max-width:560px) { .mk-duo .side .mk-stage { --base:96px; padding:10px 10px 6px; } }
+
+/* 基本應對原則：選一隻吉祥物來選風格 */
+.mk-picks { display:grid; grid-template-columns:repeat(4,1fr); gap:10px; }
+@media (max-width:640px) { .mk-picks { grid-template-columns:repeat(2,1fr); } }
+.mk-pick { display:flex; flex-direction:column; align-items:center; gap:2px; padding:12px 8px 10px; border:2px solid var(--line); border-radius:16px;
+  background:var(--surface); color:var(--text); font-weight:400; }
+.mk-pick b { font-size:16px; color:var(--c); margin-top:4px; }
+.mk-pick.on { border-color:var(--c); background:var(--cs); }
+.mk-chat { display:flex; align-items:center; gap:10px; }
+
+/* 結果小卡預覽 */
+.modal .card.wide { max-width:560px; text-align:center; }
+.modal .card.wide img.cardpv { width:100%; border-radius:12px; border:1px solid var(--line); }
+
+/* 預覽版：吉祥物開／關切換列 */
+#mkSwitch { position:fixed; left:12px; bottom:12px; z-index:90; display:flex; gap:6px; align-items:center; background:var(--surface); border:1px solid var(--line);
+  border-radius:99px; padding:5px 6px 5px 14px; box-shadow:var(--shadow); font-size:13px; font-weight:700; }
+#mkSwitch a { text-decoration:none; padding:5px 12px; border-radius:99px; color:var(--text); background:var(--surface2); }
+#mkSwitch a.on { background:var(--brand); color:var(--brand-ink); }
+
+/* 載入動畫：方塊重組後變成四隻吉祥物（只在吉祥物開啟時） */
+.splash-mk { display:none; }
+html.mascot-on .splash-in { position:relative; }
+html.mascot-on .splash-mk { display:flex; position:absolute; top:-26px; left:50%; transform:translateX(-50%); gap:4px; align-items:flex-end; pointer-events:none; }
+html.mascot-on .splash-mk .mk { --base:100px; opacity:0; transform:scale(.3) translateY(24px); animation:mkPop .5s cubic-bezier(.3,1.5,.5,1) forwards; }
+html.mascot-on .splash-mk .mk:nth-child(1) { animation-delay:1.45s; } html.mascot-on .splash-mk .mk:nth-child(2) { animation-delay:1.55s; }
+html.mascot-on .splash-mk .mk:nth-child(3) { animation-delay:1.65s; } html.mascot-on .splash-mk .mk:nth-child(4) { animation-delay:1.75s; }
+html.mascot-on .sq { animation:sqSplit 1.5s cubic-bezier(.65,0,.35,1) 1 both, sqOut .22s ease 1.4s forwards; }
+html.mascot-on .sq-i { animation-delay:.06s, 1.4s; } html.mascot-on .sq-c { animation-delay:.12s, 1.4s; } html.mascot-on .sq-s { animation-delay:.18s, 1.4s; }
+html.mascot-on .splash-in p { margin-top:84px; }
+@keyframes mkPop { to { opacity:1; transform:scale(1) translateY(0); } }
+@keyframes sqOut { to { opacity:0; transform:scale(.4); } }
+@media (prefers-reduced-motion:reduce) { html.mascot-on .splash-mk .mk { animation:none; opacity:1; transform:none; } html.mascot-on .sq { animation:none; opacity:0; } }
+.hero .mk-row .mk:nth-child(2) { --d:.35s; } .hero .mk-row .mk:nth-child(3) { --d:.7s; } .hero .mk-row .mk:nth-child(4) { --d:1.05s; }
+.modal { overflow:auto; }
+.modal .card.wide { max-height:94vh; overflow:auto; }
+.feature.has-mk .lock { right:124px; }
+@media (max-width:640px) { .feature.has-mk .lock { right:108px; } }

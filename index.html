@@ -5,11 +5,18 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>DiSC 人際風格工作坊</title>
 <link rel="stylesheet" href="css/style.css">
+<script>/* 吉祥物開關（先用上次的狀態避免閃爍；載入設定後由 mascotInit 校正）*/try{var q=new URLSearchParams(location.search).get("mascot"),v=localStorage.getItem("disc_mascot");document.documentElement.classList.toggle("mascot-on",q==="off"||q==="0"?false:q==="on"||q==="1"?true:v!=="0")}catch(e){}</script>
 </head>
 <body>
 <div id="splash" role="status" aria-label="載入中">
   <div class="splash-in">
     <div class="sq-grid"><i class="sq sq-d"></i><i class="sq sq-i"></i><i class="sq sq-c"></i><i class="sq sq-s"></i></div>
+    <div class="splash-mk" aria-hidden="true">
+      <span class="mk"><img class="mk-l" src="assets/mascot/D.webp" alt="" loading="lazy"><img class="mk-d" src="assets/mascot/D-w.webp" alt="" loading="lazy"></span>
+      <span class="mk"><img class="mk-l" src="assets/mascot/I.webp" alt="" loading="lazy"><img class="mk-d" src="assets/mascot/I-w.webp" alt="" loading="lazy"></span>
+      <span class="mk"><img class="mk-l" src="assets/mascot/S.webp" alt="" loading="lazy"><img class="mk-d" src="assets/mascot/S-w.webp" alt="" loading="lazy"></span>
+      <span class="mk"><img class="mk-l" src="assets/mascot/C.webp" alt="" loading="lazy"><img class="mk-d" src="assets/mascot/C-w.webp" alt="" loading="lazy"></span>
+    </div>
     <p class="muted">載入中…</p>
   </div>
 </div>

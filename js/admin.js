@@ -44,7 +44,8 @@ async function render() {
 const FNAME = { tools: "01 解密工具", self: "02 看懂自己", others: "03 識別他人", adapt: "04 彈性調適" };
 async function vSettings() {
   CFG = await A("admin_get_config");
-  const [arts, qs, res] = await Promise.all([A("admin_list_articles"), select("questions", "select=kind"), A("admin_list_results")]);
+  const [arts, qs, res, mkRows] = await Promise.all([A("admin_list_articles"), select("questions", "select=kind"), A("admin_list_results"), select("site_content", "key=eq.mascot&select=key,data")]);
+  const mascotOn = !(mkRows[0] && mkRows[0].data && mkRows[0].data.enabled === false);
   $("#view").innerHTML = `
   <div class="grid c4"><div class="card stat">教材<b>${arts.length}</b></div><div class="card stat">自測題目<b>${qs.filter(q => q.kind === "self").length}</b></div>
     <div class="card stat">識別題目<b>${qs.filter(q => q.kind === "others").length}</b></div><div class="card stat">填答人數<b>${res.length}</b></div></div>
@@ -56,6 +57,9 @@ async function vSettings() {
       <button class="ghost sm" data-blank="${k}">設為空白密碼</button>
       <span class="small muted">${l.blank ? "目前：空白密碼（直接按解鎖即可）" : "目前：已設定密碼"}</span></div>`; }).join("")}
     <p><button id="saveLocks">儲存解鎖設定</button></p></div>
+  <div class="card"><h2>🐦 吉祥物</h2><p class="muted">前台使用老鷹（D）、鸚鵡（i）、鴿子（S）、貓頭鷹（C）四隻吉祥物。關閉後，前台立即回復成沒有任何吉祥物的版面（學員重新整理頁面後生效）。</p>
+    <label class="switch"><input type="checkbox" id="mkOn" ${mascotOn ? "checked" : ""}> 在前台顯示吉祥物</label>
+    <p><button id="saveMk">儲存吉祥物設定</button></p></div>
   <div class="card"><h2>🛡️ 管理員密碼</h2><p class="muted">目前${CFG.admin_pw_blank ? "為<b>空白密碼</b>（任何人知道網址都能登入後台，建議設定密碼）" : "已設定密碼"}。</p>
     <div class="row"><input type="text" id="newAdminPw" placeholder="新的管理員密碼" style="max-width:260px"><button id="saveAdminPw">更新密碼</button><button class="ghost" id="blankAdminPw">設為空白</button></div></div>`;
   $("#saveLocks").onclick = e => busy(e.target, async () => {
@@ -64,6 +68,7 @@ async function vSettings() {
     $$("[data-pw]").forEach(i => { if (i.value) lock_pw[i.dataset.pw] = i.value; });
     await A("admin_update_config", { patch: { locks_on, lock_pw } }); toast("已儲存"); vSettings();
   });
+  $("#saveMk").onclick = e => busy(e.target, async () => { await A("admin_upsert_site", { p_key: "mascot", p_data: { enabled: $("#mkOn").checked } }); toast("已儲存"); vSettings(); });
   $$("[data-blank]").forEach(b => b.onclick = () => busy(b, async () => { await A("admin_update_config", { patch: { lock_pw: { [b.dataset.blank]: "" } } }); toast("已設為空白密碼"); vSettings(); }));
   const setAdmin = pw => async () => { await A("admin_update_config", { patch: { new_admin_pw: pw() } }); PW = pw(); store.set("admin_pw", PW); toast("管理員密碼已更新"); vSettings(); };
   $("#saveAdminPw").onclick = e => { if (!$("#newAdminPw").value) return toast("請輸入新密碼"); busy(e.target, setAdmin(() => $("#newAdminPw").value)); };

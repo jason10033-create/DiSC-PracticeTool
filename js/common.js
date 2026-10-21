@@ -653,3 +653,37 @@ const DEFAULT_SELF_RESULT = {
 const getSelfResult = map => ({ ...DEFAULT_SELF_RESULT, ...((map && map["self_result"]) || {}) });
 
 initTheme();
+
+/* ============ 吉祥物（老鷹 D／鸚鵡 i／鴿子 S／貓頭鷹 C）============
+   開關優先順序：網址 ?mascot=off|on（預覽用）> 後台「基本設定」（site_content 的 mascot）> 預設開。
+   關閉時 mk()／mkStage() 一律回傳空字串，前台版面與沒有吉祥物時完全相同。 */
+const MASCOT = {
+  D: { animal: "老鷹", say: "先講重點，我們直接開始！" },
+  I: { animal: "鸚鵡", say: "太好玩了，一起來試試看！" },
+  S: { animal: "鴿子", say: "不急，慢慢來，我陪著你。" },
+  C: { animal: "貓頭鷹", say: "讓我先想一想，再來決定。" }
+};
+let MASCOT_ON = true;
+function mascotInit(site) {
+  let on = !(site && site["mascot"] && site["mascot"].enabled === false);
+  const q = new URLSearchParams(location.search).get("mascot");
+  if (q === "off" || q === "0") on = false; else if (q === "on" || q === "1") on = true;
+  MASCOT_ON = on;
+  document.documentElement.classList.toggle("mascot-on", on);
+  try { localStorage.setItem("disc_mascot", on ? "1" : "0"); } catch {}
+  return on;
+}
+/* 單隻吉祥物。深色模式自動換成白色描邊版（CSS 控制）；opt.sticker＝一律用白邊版（放在彩色底上）*/
+function mk(t, { size = "", flip = false, cls = "", scale = null, eager = false } = {}) {
+  if (!MASCOT_ON) return "";
+  const ld = eager ? "" : ` loading="lazy"`;
+  return `<span class="mk${size ? " mk-" + size : ""}${flip ? " flip" : ""}${cls ? " " + cls : ""}"${scale ? ` style="--s:${scale}"` : ""} aria-hidden="true">` +
+    `<img class="mk-l" src="assets/mascot/${t}.webp" alt=""${ld} decoding="async"><img class="mk-d" src="assets/mascot/${t}-w.webp" alt=""${ld} decoding="async"></span>`;
+}
+/* 一組吉祥物：types 依重要性排序，第 1 隻最大、其餘較小；equal＝等大（四型均衡）。rev＝大的放最右（左右面對面時用在「我」這一側）*/
+function mkStage(types, { equal = false, flip = false, rev = false } = {}) {
+  if (!MASCOT_ON || !types.length) return "";
+  return `<div class="mk-stage${equal ? "" : " t-" + types[0]}${rev ? " rev" : ""}" role="img" aria-label="${esc(types.map(t => MASCOT[t].animal + "吉祥物").join("、"))}">` +
+    types.map((t, i) => mk(t, { flip, scale: equal ? 0.7 : i === 0 ? 1 : 0.62 })).join("") + `</div>`;
+}
+const mkSay = (t, cls = "") => MASCOT_ON ? `<div class="mk-say t-${t} ${cls}">${esc(MASCOT[t].say)}</div>` : "";
