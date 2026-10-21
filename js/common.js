@@ -681,9 +681,9 @@ function mk(t, { size = "", flip = false, cls = "", scale = null, eager = false 
     `<img class="mk-l" src="assets/mascot/${t}.webp" alt=""${ld} decoding="async"><img class="mk-d" src="assets/mascot/${t}-w.webp" alt=""${ld} decoding="async"></span>`;
 }
 /* 一組吉祥物：types 依重要性排序，第 1 隻最大、其餘較小；equal＝等大（四型均衡）。rev＝大的放最右（左右面對面時用在「我」這一側）*/
-function mkStage(types, { equal = false, flip = false, rev = false } = {}) {
+function mkStage(types, { equal = false, flip = false, rev = false, sm = false } = {}) {
   if (!MASCOT_ON || !types.length) return "";
-  return `<div class="mk-stage${equal ? "" : " t-" + types[0]}${rev ? " rev" : ""}" role="img" aria-label="${esc(types.map(t => MASCOT[t].animal + "吉祥物").join("、"))}">` +
+  return `<div class="mk-stage${equal ? "" : " t-" + types[0]}${rev ? " rev" : ""}${sm ? " sm" : ""}" role="img" aria-label="${esc(types.map(t => MASCOT[t].animal + "吉祥物").join("、"))}">` +
     types.map((t, i) => mk(t, { flip, scale: equal ? 0.7 : i === 0 ? 1 : 0.62 })).join("") + `</div>`;
 }
 const mkSay = (t, cls = "") => MASCOT_ON ? `<div class="mk-say t-${t} ${cls}">${esc(MASCOT[t].say)}</div>` : "";
