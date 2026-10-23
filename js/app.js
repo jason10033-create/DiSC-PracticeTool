@@ -17,7 +17,10 @@ const FEATURES = [
   { id: "others", no: "03", name: "識別他人", desc: "從生活中的行為線索，觀察他人的風格與溝通偏好。", t: "S", icon: "🔍" },
   { id: "adapt", no: "04", name: "彈性調適", desc: "依對方風格調整溝通，讓你的想法更容易被接受。", t: "C", icon: "🧭" }
 ];
-const isUnlocked = f => !cfg.locks[f] || store.sget("unlocked_" + f) === true;
+/* 解鎖後永久記住：標記存在學員瀏覽器的 localStorage（不含密碼）；之後同一個瀏覽器不會再要求輸入密碼。
+   localStorage 無法使用時（例如部分無痕模式）退回只在目前分頁有效的 sessionStorage */
+const isUnlocked = f => !cfg.locks[f] || store.get("disc_unlocked_" + f) === "1" || store.sget("unlocked_" + f) === true;
+const rememberUnlock = f => { store.set("disc_unlocked_" + f, "1"); store.sset("unlocked_" + f, true); };
 
 /* 首頁文字（可由後台「首頁內容」編輯）*/
 let SITE = {};           // site_content 全部資料（home / intro_self / intro_others）
@@ -65,7 +68,7 @@ function askUnlock(f) {
   const go = async () => {
     $("#ok", m).disabled = true;
     try {
-      if (await rpc("check_unlock", { feature: f.id, pw: $("#pw", m).value })) { store.sset("unlocked_" + f.id, true); m.remove(); location.hash = "#/" + f.id; route(); }
+      if (await rpc("check_unlock", { feature: f.id, pw: $("#pw", m).value })) { rememberUnlock(f.id); m.remove(); location.hash = "#/" + f.id; route(); }
       else { $("#err", m).textContent = "密碼不正確"; }
     } catch (e) { $("#err", m).textContent = "驗證失敗：" + e.message; }
     $("#ok", m).disabled = false;
