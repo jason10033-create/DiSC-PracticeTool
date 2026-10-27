@@ -1,0 +1,25 @@
+# 讓免費版 Supabase 專案保持「有活動」，避免閒置 7 天被自動暫停。
+# 每 3 天對資料庫發一次很輕的讀取請求（只讀 1 筆公開的網站設定）。也可以到 Actions 頁面按「Run workflow」手動執行。
+# 這裡用的是網站程式碼裡本來就公開的 anon 公開金鑰，不是機密。
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: "17 3 */3 * *"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        env:
+          SUPABASE_URL: https://rgtgwmbbbdbygasoknuv.supabase.co
+          SUPABASE_KEY: sb_publishable_DjB0CSECYgCGf4dS1HMuLA_wSjnFah7
+        run: |
+          code=$(curl -s -o /tmp/out.json -w "%{http_code}" \
+            "$SUPABASE_URL/rest/v1/site_content?select=key&limit=1" \
+            -H "apikey: $SUPABASE_KEY" -H "Authorization: Bearer $SUPABASE_KEY")
+          echo "HTTP $code"
+          cat /tmp/out.json; echo
+          test "$code" = "200"
