@@ -520,15 +520,16 @@ function circleSvg(scores) {
 /* 多人散點圖：每個填答者一個點；位置相近（分數雷同）的填答者會合併成同一個圓圈，圈上標示人數。
    姓名有兩種看法：① 滑鼠移到圓圈上，立即顯示姓名（bindScatter 的自訂提示，無延遲）；
    ② 按鈕一次顯示所有姓名（svg 加上 show-names 類別，標籤位置已自動避開彼此與其他圓圈） */
-function discScatterSvg(rows) {
+function discScatterSvg(rows, info) {
+  // info(r) → { label, t }：提示文字裡的風格名稱與圓點顏色（後台傳入，可顯示雙型並重／三型並重／四型均衡等特殊類型）；沒傳入時用儲存的風格代碼
   const CLUSTER_R = 5; // 視窗座標系 220×220 中，多近視為「雷同」
   const groups = [];
   rows.forEach(r => {
     const p = discPoint({ D: r.score_d, I: r.score_i, S: r.score_s, C: r.score_c });
-    const t = (r.primary_types && r.primary_types[0]) || "D";
+    const x = info ? info(r) : { label: r.style ? styleLabel(r.style) : "", t: (r.primary_types && r.primary_types[0]) || "D" };
     let g = groups.find(g => Math.hypot(g.x - p.x, g.y - p.y) <= CLUSTER_R);
     if (!g) { g = { x: p.x, y: p.y, items: [] }; groups.push(g); }
-    g.items.push({ name: r.user_name, style: r.style, t }); // 群中心固定用第一個加入者的位置
+    g.items.push({ name: r.user_name, style: x.label, t: x.t }); // 群中心固定用第一個加入者的位置
   });
   groups.forEach(g => { g.r = Math.min(7 + (g.items.length - 1) * 2.5, 16); });
   // --- 姓名標籤位置：每個圓圈周圍嘗試 8 個方向 × 3 種距離，挑「與其他標籤、圓圈重疊最少、離圓圈最近」的位置；
@@ -566,7 +567,7 @@ function discScatterSvg(rows) {
   const dots = groups.map(g => {
     const cnt = {}; g.items.forEach(i => cnt[i.t] = (cnt[i.t] || 0) + 1);
     const mainType = Object.keys(cnt).sort((a, b) => cnt[b] - cnt[a])[0];
-    const tip = g.items.map(i => `${i.name}${i.style ? "（" + styleLabel(i.style) + "）" : ""}`).join("\n");
+    const tip = g.items.map(i => `${i.name}${i.style ? "（" + i.style + "）" : ""}`).join("\n");
     return `<g><circle class="dot" data-tip="${esc(tip)}" aria-label="${esc(tip.replace(/\n/g, "、"))}" cx="${g.x.toFixed(1)}" cy="${g.y.toFixed(1)}" r="${g.r}" fill="var(--${mainType})" stroke="#fff" stroke-width="2" opacity=".92"/>
       ${g.items.length > 1 ? `<text x="${g.x.toFixed(1)}" y="${(g.y + 4).toFixed(1)}" font-size="11" font-weight="800" fill="#fff" text-anchor="middle" pointer-events="none">${g.items.length}</text>` : ""}</g>`;
   }).join("");
