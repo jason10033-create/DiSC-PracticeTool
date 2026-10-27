@@ -423,6 +423,7 @@ async function vReport() {
   rows.forEach(r => { const x = resultStyle(r); if (x.kind !== "old" && dist[x.label] !== undefined) dist[x.label]++; });
   const distTotal = rows.filter(r => r.style).length, maxS = Math.max(1, ...Object.values(dist));
   const distRow = (label, cls, st) => `<div class="bar-row ${cls}" style="grid-template-columns:110px 1fr 44px"><b>${esc(label)}</b><div class="track"><div class="fill" style="width:${dist[label] / maxS * 100}%;${st}"></div></div><span>${dist[label]}人</span></div>`;
+  const shownSpecial = SPECIAL_STYLES.filter(s => dist[s] > 0); // 只列出實際有人的特殊類型
   const specialCls = s => s === "四型均衡" ? "" : `t-${CIRCLE.find(t => s.startsWith(TLABEL[t]))}`;
   const rated = rows.filter(r => r.accuracy_feedback);
   const rateCount = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }; rated.forEach(r => rateCount[r.accuracy_feedback]++);
@@ -438,9 +439,8 @@ async function vReport() {
       : `<p class="muted">目前還沒有人回饋。</p>`}</div>
   <div class="card" style="margin-top:16px"><h2>風格分布（共 ${distTotal} 人）</h2>
     ${STYLES.map(s => distRow(styleLabel(s), `t-${styleParts(s).p}`, "")).join("")}
-    <div class="muted small" style="margin:12px 0 2px;font-weight:700">分數接近的特殊類型</div>
-    ${SPECIAL_STYLES.map(s => distRow(s, specialCls(s), s === "四型均衡" ? "background:var(--brand)" : "")).join("")}
-    <p class="muted small">僅統計使用新版測評（含風格代碼）的紀錄。上方 12 種為「單一主型」（可帶輔型）；下方為分數接近的雙型並重、三型並重、四型均衡（判讀與學員結果頁一致）。</p></div>`;
+    ${shownSpecial.length ? `<div class="muted small" style="margin:12px 0 2px;font-weight:700">分數接近的特殊類型</div>${shownSpecial.map(s => distRow(s, specialCls(s), s === "四型均衡" ? "background:var(--brand)" : "")).join("")}` : ""}
+    <p class="muted small">僅統計使用新版測評（含風格代碼）的紀錄。12 種為「單一主型」（可帶輔型）；分數接近的雙型並重、三型並重、四型均衡（判讀與學員結果頁一致）只在有人出現時才列出。</p></div>`;
   bindScope();
   bindScatter($("#scatterWrap"), $("#toggleNames"), !!bindScatter.show); // 切換統計範圍重新繪圖後，維持上次的「顯示姓名」狀態
 }
