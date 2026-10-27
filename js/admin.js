@@ -336,6 +336,19 @@ async function loadResults() {
   return { all, groups, rows: all.filter(r => inGroup(r, resGroup)), count: id => all.filter(r => inGroup(r, id)).length,
     gname: id => (groups.find(g => g.id === id) || {}).name || "" };
 }
+/* 填答者的「顯示風格」：分數接近時（雙型並重／三型並重／四型均衡）顯示判讀結果，與學員結果頁一致。
+   資料庫裡儲存的風格代碼（主型＋輔型）不變，只是顯示時依分數重新判讀。 */
+const KIND_TEXT = { single: "單一主型", dual: "雙型並重", triple: "三型並重", quad: "四型均衡" };
+function resultStyle(r) {
+  const sc = { D: r.score_d, I: r.score_i, S: r.score_s, C: r.score_c }, pat = analyzeScores(sc), kind = pat.kind;
+  const dots = ts => ts.map(t => TLABEL[t]).join("・");
+  if (!r.style) return { kind: "old", label: "舊版", key: "舊版", cls: "", st: `style="background:var(--muted)"`, note: "" };
+  if (kind === "single") return { kind, label: styleLabel(r.style), key: styleLabel(r.style), cls: `t-${styleParts(r.style).p}`, st: "", note: "" };
+  const note = `${KIND_TEXT[kind]}（原判定 ${styleLabel(r.style)}）`;
+  if (kind === "dual") return { kind, label: `${dots(pat.high)} 並重`, key: dots(pat.high), cls: `t-${pat.high[0]}`, st: "", note };
+  if (kind === "triple") return { kind, label: `${dots(pat.high)} 偏高`, key: `${dots(pat.high)}（${TLABEL[pat.low[0]]} 偏低）`, cls: `t-${pat.high[0]}`, st: "", note };
+  return { kind, label: "四型均衡", key: "四型均衡", cls: "", st: `style="background:var(--brand)"`, note };
+}
 async function vResults() {
   const { groups, rows, count, gname } = await loadResults();
   const cur = groups.find(g => g.id === resGroup);
@@ -352,7 +365,7 @@ async function vResults() {
     <div class="scroll-x"><table class="tbl"><thead><tr><th><input type="checkbox" id="selAll" aria-label="全選"></th><th>姓名</th><th>群組</th><th>風格</th><th>D</th><th>i</th><th>S</th><th>C</th><th>準確度回饋</th><th>填答時間</th><th></th></tr></thead><tbody>
     ${rows.map(r => `<tr><td><input type="checkbox" data-sel="${r.id}"></td><td><b>${esc(r.user_name)}</b></td>
       <td>${r.group_id ? `<span class="pill" style="background:var(--brand)">${esc(gname(r.group_id))}</span>` : `<span class="muted small">未分組</span>`}</td>
-      <td>${r.style ? `<span class="pill t-${r.primary_types[0]}">${esc(styleLabel(r.style))}</span>` : `<span class="muted small">舊版</span>`}</td>
+      <td>${(() => { const x = resultStyle(r); return x.kind === "old" ? `<span class="muted small">舊版</span>` : `<span class="pill ${x.cls}" ${x.st}>${esc(x.label)}</span>${x.note ? `<div class="muted small">${esc(x.note)}</div>` : ""}`; })()}</td>
       <td>${r.score_d}</td><td>${r.score_i}</td><td>${r.score_s}</td><td>${r.score_c}</td><td class="small">${rateText(r)}</td><td class="small">${new Date(r.created_at).toLocaleString("zh-TW")}</td>
       <td><button class="danger sm" data-del="${r.id}">刪除</button></td></tr>`).join("") || `<tr><td colspan="11" class="muted">這個範圍目前沒有填答者</td></tr>`}</tbody></table></div></div>`;
   // --- 群組管理 ---
@@ -383,8 +396,8 @@ async function vResults() {
   // --- 刪除單筆／匯出 ---
   $$("[data-del]").forEach(b => b.onclick = () => { const r = rows.find(x => x.id === b.dataset.del); if (confirm(`確定刪除「${r.user_name}」的測評結果？此動作無法復原。`)) busy(b, async () => { await A("admin_delete_result", { p_id: b.dataset.del }); toast("已刪除"); vResults(); }); });
   $("#csv").onclick = () => {
-    const head = ["姓名", "群組", "風格", "主型", "輔型", "D", "i", "S", "C", "準確度回饋(1-5)", "填答時間"];
-    const body = rows.map(r => [r.user_name, gname(r.group_id), r.style ? styleLabel(r.style) : "", r.primary_types[0], r.primary_types[1] || "", r.score_d, r.score_i, r.score_s, r.score_c, r.accuracy_feedback || "", new Date(r.created_at).toLocaleString("zh-TW")]);
+    const head = ["姓名", "群組", "風格", "分數形態", "原判定（主型＋輔型）", "主型", "輔型", "D", "i", "S", "C", "準確度回饋(1-5)", "填答時間"];
+    const body = rows.map(r => { const x = resultStyle(r); return [r.user_name, gname(r.group_id), x.kind === "old" ? "" : x.label, x.kind === "old" ? "" : KIND_TEXT[x.kind], r.style ? styleLabel(r.style) : "", r.primary_types[0], r.primary_types[1] || "", r.score_d, r.score_i, r.score_s, r.score_c, r.accuracy_feedback || "", new Date(r.created_at).toLocaleString("zh-TW")]; });
     const csv = [head, ...body].map(l => l.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\r\n");
     const scope = resGroup === "all" ? "" : "_" + (resGroup === "none" ? "未分組" : gname(resGroup)).replace(/[\\/:*?"<>|]/g, "-");
     const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv" })); a.download = `disc_results${scope}.csv`; a.click();
@@ -401,22 +414,32 @@ async function vReport() {
   if (!n) { $("#view").innerHTML = scopeCard + `<div class="card" style="margin-top:16px"><h2>彙總報表</h2><p class="muted">這個範圍目前沒有填答資料。</p></div>`; bindScope(); return; }
   const avg = { D: 0, I: 0, S: 0, C: 0 }; rows.forEach(r => { avg.D += r.score_d; avg.I += r.score_i; avg.S += r.score_s; avg.C += r.score_c; }); TYPES.forEach(t => avg[t] = Math.round(avg[t] / n));
   const prim = { D: 0, I: 0, S: 0, C: 0 }; rows.forEach(r => prim[r.primary_types[0]]++);
-  const sty = Object.fromEntries(STYLES.map(s => [s, 0])); rows.forEach(r => { if (r.style && sty[r.style] !== undefined) sty[r.style]++; });
+  // 分數形態：單一主型（含輔型）／雙型並重／三型並重／四型均衡（與學員結果頁判讀一致）；12 種風格分布只統計「單一主型」者
+  const sty = Object.fromEntries(STYLES.map(s => [s, 0]));
+  const kindCount = { single: 0, dual: 0, triple: 0, quad: 0 }, kindDetail = { dual: {}, triple: {} };
+  rows.forEach(r => { const x = resultStyle(r); if (x.kind === "old") return; kindCount[x.kind]++;
+    if (x.kind === "single" && sty[r.style] !== undefined) sty[r.style]++;
+    if (kindDetail[x.kind]) kindDetail[x.kind][x.key] = (kindDetail[x.kind][x.key] || 0) + 1; });
+  const kindTotal = Object.values(kindCount).reduce((a, b) => a + b, 0), singleTotal = kindCount.single;
+  const detailText = k => Object.entries(kindDetail[k] || {}).sort((a, b) => b[1] - a[1]).map(([name, c]) => `${name} ${c} 人`).join("、");
   const maxS = Math.max(1, ...Object.values(sty));
   const rated = rows.filter(r => r.accuracy_feedback);
   const rateCount = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 }; rated.forEach(r => rateCount[r.accuracy_feedback]++);
   const avgRate = rated.length ? (rated.reduce((s, r) => s + r.accuracy_feedback, 0) / rated.length).toFixed(1) : null;
   const maxRate = Math.max(1, ...Object.values(rateCount));
   $("#view").innerHTML = scopeCard + `<div class="grid c2" style="margin-top:16px">
-    <div class="card"><h2>主型人數分布（共 ${n} 人）</h2>${TYPES.map(t => `<div class="bar-row t-${t}"><b>${TLABEL[t]} ${TNAME[t]}</b><div class="track"><div class="fill" style="width:${prim[t] / n * 100}%"></div></div><span>${prim[t]}人</span></div>`).join("")}</div>
+    <div class="card"><h2>主型人數分布（共 ${n} 人）</h2><p class="muted small" style="margin-top:0">分數接近者以最高分的類型計。</p>${TYPES.map(t => `<div class="bar-row t-${t}"><b>${TLABEL[t]} ${TNAME[t]}</b><div class="track"><div class="fill" style="width:${prim[t] / n * 100}%"></div></div><span>${prim[t]}人</span></div>`).join("")}</div>
     <div class="card"><h2>全體平均分數</h2>${barsHtml(avg)}</div></div>
   <div class="card" style="margin-top:16px"><div class="row between"><h2>DiSC 分布圖</h2><button class="soft sm" id="toggleNames" aria-pressed="false">顯示所有姓名</button></div>    <div class="circleWrap" id="scatterWrap" style="max-width:360px">${discScatterSvg(rows)}</div></div>
   <div class="card" style="margin-top:16px"><h2>評估結果準確度回饋</h2>
     ${rated.length ? `<p class="muted">已有 ${rated.length} / ${n} 人回饋，平均 <b>${avgRate}</b> 分（滿分 5）。</p>
       ${[5, 4, 3, 2, 1].map(k => `<div class="bar-row" style="grid-template-columns:90px 1fr 44px"><b>${k}・${RATE_LABELS[k]}</b><div class="track"><div class="fill" style="width:${rateCount[k] / maxRate * 100}%;background:var(--brand)"></div></div><span>${rateCount[k]}人</span></div>`).join("")}`
       : `<p class="muted">目前還沒有人回饋。</p>`}</div>
-  <div class="card" style="margin-top:16px"><h2>12 種風格分布</h2>${STYLES.map(s => `<div class="bar-row t-${styleParts(s).p}" style="grid-template-columns:70px 1fr 44px"><b>${styleLabel(s)}</b><div class="track"><div class="fill" style="width:${sty[s] / maxS * 100}%"></div></div><span>${sty[s]}人</span></div>`).join("")}
-    <p class="muted small">僅統計使用新版測評（含風格代碼）的紀錄。</p></div>`;
+  <div class="card" style="margin-top:16px"><h2>分數形態分布</h2>
+    <p class="muted small" style="margin-top:0">依分數接近程度判讀（與學員結果頁一致）：單一主型＝有明顯突出的風格（可帶輔型）；其餘為分數接近的並重／均衡。</p>
+    ${["single", "dual", "triple", "quad"].map(k => `<div class="bar-row" style="grid-template-columns:90px 1fr 44px"><b>${KIND_TEXT[k]}</b><div class="track"><div class="fill" style="width:${kindTotal ? kindCount[k] / kindTotal * 100 : 0}%;background:var(--brand)"></div></div><span>${kindCount[k]}人</span></div>${detailText(k) ? `<div class="muted small" style="margin:-4px 0 6px 100px">${esc(detailText(k))}</div>` : ""}`).join("")}</div>
+  <div class="card" style="margin-top:16px"><h2>12 種風格分布（單一主型，共 ${singleTotal} 人）</h2>${STYLES.map(s => `<div class="bar-row t-${styleParts(s).p}" style="grid-template-columns:70px 1fr 44px"><b>${styleLabel(s)}</b><div class="track"><div class="fill" style="width:${sty[s] / maxS * 100}%"></div></div><span>${sty[s]}人</span></div>`).join("")}
+    <p class="muted small">僅統計使用新版測評（含風格代碼）、且為「單一主型」的紀錄；雙型並重、三型並重、四型均衡者請見上方「分數形態分布」。</p></div>`;
   bindScope();
   bindScatter($("#scatterWrap"), $("#toggleNames"), !!bindScatter.show); // 切換統計範圍重新繪圖後，維持上次的「顯示姓名」狀態
 }
