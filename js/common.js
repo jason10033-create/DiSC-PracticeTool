@@ -27,7 +27,7 @@ function applyTheme(t) {
 }
 function initTheme() {
   let t = null; try { t = localStorage.getItem("disc_theme"); } catch {}
-  if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  if (t !== "light" && t !== "dark") t = "dark"; // 第一次進入（沒有儲存過偏好）一律預設深色；使用者按太陽／月亮切換後，之後沿用他的選擇
   applyTheme(t);
   $$("[data-theme-set]").forEach(b => b.onclick = () => {
     const n = b.dataset.themeSet;
