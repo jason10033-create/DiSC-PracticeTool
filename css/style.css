@@ -302,3 +302,4 @@ h2.mk-title { font-size:30px; }
 .res-left .res-title > .row { justify-content:center; flex-wrap:nowrap; }
 .res-right { display:flex; flex-direction:column; align-items:center; gap:22px; }
 .res-right > div:last-child { align-self:stretch; }
+.notice.watch p { margin:6px 0 0; }

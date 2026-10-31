@@ -690,3 +690,186 @@ function mkStage(types, { equal = false, flip = false, rev = false, sm = false }
     types.map((t, i) => mk(t, { flip, scale: equal ? 0.7 : i === 0 ? 1 : 0.62 })).join("") + `</div>`;
 }
 const mkSay = (t, cls = "") => MASCOT_ON ? `<div class="mk-say t-${t} ${cls}">${esc(MASCOT[t].say)}</div>` : "";
+
+/* ============ 測評結果頁內容（看懂自己／識別他人）============
+   每一種結果類型都有「預設內容」（程式內建），後台可逐欄覆寫（site_content：self_results／others_results）。
+   覆寫只存「改過的欄位」，沒改的欄位仍用預設內容，所以之後調整「四型基本應對」等資料，沒改過的欄位會跟著更新。
+   文字可用代號：{gap}＝分數（比重）差距（例如「相差 3 分」「分數相同」）、{spread}＝四型分數最高與最低的差距。*/
+const OTHERS_CLOSE_GAP = 20; // 識別他人：與最高比重相差 ≤ 此百分點的類型都列為「可能」（10 題時 20% ＝ 差 2 題）
+const GAP_TEXT = n => n === 0 ? "分數相同" : `相差 ${n} 分`;
+
+/* 結果頁文字的簡易排版：空行分段；「- 」開頭為清單；**粗體**；段落內換行＝換行 */
+function rbody(text) {
+  const inline = s => esc(s).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+  const out = []; let list = null, para = [];
+  const flushP = () => { if (para.length) { out.push(`<p>${para.map(inline).join("<br>")}</p>`); para = []; } };
+  const flushL = () => { if (list) { out.push(`<ul>${list.map(x => `<li>${inline(x)}</li>`).join("")}</ul>`); list = null; } };
+  for (const raw of String(text == null ? "" : text).split("\n")) {
+    const l = raw.trim();
+    if (!l) { flushP(); flushL(); continue; }
+    const m = l.match(/^[-•]\s+(.*)$/);
+    if (m) { flushP(); (list = list || []).push(m[1]); } else { flushL(); para.push(l); }
+  }
+  flushP(); flushL(); return out.join("");
+}
+
+const SELF_TYPE_KEYS = [...STYLES.map(s => "style:" + s), "dual:DI", "dual:IS", "dual:SC", "dual:DC", "dual:DS", "dual:IC", ...CIRCLE.map(t => "triple:" + t), "quad"];
+const OTHERS_TYPE_KEYS = ["o1:D", "o1:I", "o1:S", "o1:C", "o2:DI", "o2:IS", "o2:SC", "o2:DC", "o2:DS", "o2:IC"];
+const dotJoin = ts => CIRCLE.filter(t => ts.includes(t)).map(t => TLABEL[t]).join("・");
+/* 後台列表用的類型名稱 */
+function resultTypeLabel(key) {
+  const [k, v] = key.split(":");
+  if (k === "style") return styleLabel(v);
+  if (k === "dual" || k === "o2") return `${dotJoin(v.split(""))} ${k === "o2" ? "接近" : "並重"}`;
+  if (k === "triple") return `${dotJoin(CIRCLE.filter(t => t !== v))} 偏高（${TLABEL[v]} 偏低）`;
+  if (k === "o1") return `${TLABEL[v]} ${TNAME[v]}`;
+  return "四型均衡";
+}
+/* 後台預覽用的範例資料：每種類型一組剛好會落在該類型的分數／題數 */
+const SELF_SAMPLE = (() => {
+  const S = {};
+  STYLES.forEach(s => {
+    const { p, s: q } = styleParts(s), [a1, a2] = ADJ[p], opp = CIRCLE.find(t => t !== p && t !== a1 && t !== a2);
+    const sc = { D: 30, I: 30, S: 30, C: 30 }; sc[p] = q ? 72 : 78; sc[opp] = 30;
+    if (q) { sc[q] = 64; sc[q === a1 ? a2 : a1] = 45; } else { sc[a1] = 55; sc[a2] = 50; }
+    S["style:" + s] = sc;
+  });
+  [["D", "I"], ["I", "S"], ["S", "C"], ["D", "C"], ["D", "S"], ["I", "C"]].forEach(([a, b]) => {
+    const o = CIRCLE.filter(t => t !== a && t !== b), sc = {}; sc[a] = 68; sc[b] = 65; sc[o[0]] = 40; sc[o[1]] = 27; S["dual:" + a + b] = sc;
+  });
+  CIRCLE.forEach(low => {
+    const sc = {}, hs = [1, 2, 3].map(k => CIRCLE[(CIRCLE.indexOf(low) + k) % 4]);
+    [62, 60, 58].forEach((v, i) => sc[hs[i]] = v); sc[low] = 20; S["triple:" + low] = sc;
+  });
+  S["quad"] = { D: 52, I: 50, S: 49, C: 49 };
+  return S;
+})();
+const OTHERS_SAMPLE = {
+  "o1:D": { D: 7, I: 1, S: 1, C: 1 }, "o1:I": { D: 1, I: 7, S: 1, C: 1 }, "o1:S": { D: 1, I: 1, S: 7, C: 1 }, "o1:C": { D: 1, I: 1, S: 1, C: 7 },
+  "o2:DI": { D: 4, I: 4, S: 1, C: 1 }, "o2:IS": { D: 1, I: 4, S: 4, C: 1 }, "o2:SC": { D: 1, I: 1, S: 4, C: 4 },
+  "o2:DC": { D: 4, I: 1, S: 1, C: 4 }, "o2:DS": { D: 4, I: 1, S: 4, C: 1 }, "o2:IC": { D: 1, I: 4, S: 1, C: 4 }
+};
+
+/* 套用後台覆寫（只覆寫有改過的欄位）並代入 {gap}／{spread} */
+function applyResultOvr(model, ovr, tok) {
+  const sub = s => String(s == null ? "" : s).replace(/\{gap\}/g, tok.gap == null ? "" : tok.gap).replace(/\{spread\}/g, tok.spread == null ? "" : tok.spread);
+  const o = ovr || {}, ob = o.boxes || {};
+  return {
+    ...model,
+    title: sub(o.title != null ? o.title : model.title), tagline: sub(o.tagline != null ? o.tagline : model.tagline),
+    boxes: model.boxes.map(b => { const x = ob[b.id] || {}; return { ...b, title: sub(x.title != null ? x.title : b.title), body: sub(x.body != null ? x.body : b.body) }; })
+  };
+}
+const resultBoxHtml = b => `<div class="box ${b.cls || ""}"><h3>${esc(b.title)}</h3>${rbody(b.body)}</div>`;
+
+/* 看懂自己：預設內容（model）。boxes 依序顯示；每個 box 有固定 id 供後台覆寫 */
+function selfModel(r, pat, adaptMap) {
+  const T = t => getType(adaptMap, t), list = a => a.map(x => "- " + x).join("\n");
+  const typeBody = t => { const d = T(t); return `${d.summary}\n\n**在乎：**${d.want}\n**壓力來源：**${d.stress}`; };
+  const typeBox = t => ({ id: "type-" + t, cls: `t-${t}`, title: `${TLABEL[t]} ${TNAME[t]}`, body: typeBody(t) });
+  const brief = ts => ({ id: "brief", title: "各風格的特質", body: ts.map(t => `- **${TLABEL[t]} ${TNAME[t]}**：${T(t).summary.replace(/^[^：]*：/, "")}`).join("\n") });
+  const comm = a => ({ id: "comm", title: "別人怎麼跟你溝通最有效？", body: list(a) });
+  if (pat.kind === "single") {
+    const { p, s } = styleParts(r.style);
+    return {
+      key: "style:" + r.style, title: `${TNAME[p]}${s ? `・帶有${TNAME[s]}傾向` : ""}`, tagline: PROFILE[p].short,
+      boxes: [{ id: "main", cls: `t-${p}`, title: `主型：${TLABEL[p]} ${TNAME[p]}`, body: typeBody(p) },
+        ...(s ? [{ id: "sec", cls: `t-${s}`, title: `輔型：${TLABEL[s]} ${TNAME[s]}`, body: T(s).summary }] : []), comm(T(p).dos)]
+    };
+  }
+  if (pat.kind === "dual") {
+    const [h, l] = pat.high, TT = DUAL_TEXT[dualKey(h, l)], key = "dual:" + dualKey(h, l);
+    if (TT.forms) {
+      const f1 = findStyle(h, l), f2 = findStyle(l, h);
+      return {
+        key, title: `${styleLabel(f1)} 或 ${styleLabel(f2)}`, tagline: `${TLABEL[h]} 與 ${TLABEL[l]} 的分數非常接近（{gap}），兩種組合都有可能`,
+        boxes: [{ id: "forms", title: "兩種組合都有可能", body: `**${styleLabel(f1)}**：${TT.forms[f1]}\n\n**${styleLabel(f2)}**：${TT.forms[f2]}` },
+          { id: "why", title: "為什麼分數會這麼接近？", body: TT.why }, { id: "tell", title: "怎麼判斷哪一個更像你？", body: TT.tell },
+          typeBox(h), typeBox(l), comm(TT.comm)]
+      };
+    }
+    return {
+      key, title: `${TLABEL[h]} 與 ${TLABEL[l]} 並重（對角型）`, tagline: "兩個風格的分數非常接近（{gap}），不分主型與輔型",
+      boxes: [{ id: "blend", title: "這是比較少見的組合", body: TT.blend }, { id: "reasons", title: "可能的原因（可能不只一種）", body: list(TT.reasons) },
+        { id: "tell", title: "怎麼觀察自己？", body: TT.tell }, typeBox(h), typeBox(l), comm(TT.comm)]
+    };
+  }
+  if (pat.kind === "triple") {
+    const low = pat.low[0], TT = TRIPLE_TEXT[low], arc = [1, 2, 3].map(k => CIRCLE[(CIRCLE.indexOf(low) + k) % 4]);
+    return {
+      key: "triple:" + low, title: `${arc.map(t => TLABEL[t]).join("、")} 三個風格偏高，${TLABEL[low]} 偏低`, tagline: "三個風格的分數很接近（{gap}），不分主型與輔型",
+      boxes: [{ id: "summary", title: "你的分數形態", body: TT.summary }, { id: "why", title: "為什麼會這樣？", body: TT.why },
+        { id: "reasons", title: "可能的原因（可能不只一種）", body: list(TT.possibilities) },
+        { id: "low", cls: `t-${low}`, title: `偏低的面向：${TLABEL[low]} ${TNAME[low]}`, body: TT.lowNote }, brief(arc), comm(TT.comm)]
+    };
+  }
+  return {
+    key: "quad", title: "四種風格分數接近（均衡型）", tagline: "四個分數最高與最低只差 {spread} 分，沒有哪一個風格特別突出，不分主型與輔型",
+    boxes: [{ id: "form", title: "你的分數形態", body: "你的 D、i、S、C 四個分數非常接近（最高與最低相差 {spread} 分），沒有哪一個風格特別突出。" },
+      { id: "reasons", title: "可能的原因（可能不只一種）", body: list(QUAD_TEXT.possibilities) }, { id: "tips", title: "可以怎麼做？", body: list(QUAD_TEXT.tips) },
+      brief(CIRCLE), comm(QUAD_TEXT.comm)]
+  };
+}
+/* 結果頁用的吉祥物組合：單一主型＝主型（＋輔型）；雙型／三型並重＝依分數高低；四型均衡＝四隻等大 */
+function mascotPlan(r, pat) {
+  if (pat.kind === "quad") return { types: CIRCLE, equal: true };
+  if (pat.kind !== "single") return { types: pat.high, equal: false };
+  const { p, s } = styleParts(r.style); return { types: s ? [p, s] : [p], equal: false };
+}
+/* 看懂自己結果卡片的主要內容（標題區＋圓形圖／長條圖＋說明區塊）。前台結果頁與後台預覽共用。
+   r＝{ scores, style }；ovrMap＝site_content 的 self_results */
+function selfResultHtml(r, adaptMap, ovrMap) {
+  const pat = analyzeScores(r.scores), sc = r.scores;
+  const base = selfModel(r, pat, adaptMap);
+  const tok = { gap: pat.kind === "dual" ? GAP_TEXT(sc[pat.high[0]] - sc[pat.high[1]]) : pat.kind === "triple" ? GAP_TEXT(sc[pat.high[0]] - sc[pat.high[2]]) : "", spread: pat.spread };
+  const m = applyResultOvr(base, (ovrMap || {})[base.key], tok);
+  const letters = ts => ts.map(t => `<span class="t-${t}" style="color:var(--c)">${TLABEL[t]}</span>`).join("");
+  const { p } = styleParts(r.style || "D"), plan = mascotPlan(r, pat);
+  const badge = pat.kind === "single" ? `<div class="styleBadge t-${p}" style="color:var(--c)">${styleLabel(r.style)}</div>`
+    : `<div class="styleBadge">${letters(pat.kind === "quad" ? CIRCLE : pat.kind === "dual" ? pat.high : [1, 2, 3].map(k => CIRCLE[(CIRCLE.indexOf(pat.low[0]) + k) % 4]))}</div>`;
+  const headRow = `<div class="row" style="gap:20px">${badge}<div><h2 style="margin:0">${esc(m.title)}</h2><p class="muted" style="margin:0">${esc(m.tagline)}</p></div></div>`;
+  // 吉祥物：左欄＝主標題風格在圓形圖正上方；右欄＝吉祥物在長條圖正上方；三個風格以上不顯示（維持由上而下的排法）
+  const mkSide = MASCOT_ON && !plan.equal && plan.types.length <= 2 ? mkStage(plan.types, { sm: true }) : "";
+  const barsBlock = `<div>${barsHtml(r.scores)}<p class="muted small">分數 0–100，越高代表該傾向越明顯。</p></div>`;
+  const circleBlock = `<div class="circleWrap">${circleSvg(r.scores)}</div>`;
+  const split = mkSide
+    ? `<div class="grid c2 res-split"><div class="res-left"><div class="res-title">${headRow}</div>${circleBlock}</div><div class="res-right">${mkSide}${barsBlock}</div></div>`
+    : `${headRow}<div class="grid c2" style="margin-top:20px;align-items:center">${circleBlock}${barsBlock}</div>`;
+  const card = { types: plan.types, equal: plan.equal, scores: r.scores, label: pat.kind === "single" ? styleLabel(r.style) : plan.types.map(t => TLABEL[t]).join(" "), title: m.title, tagline: m.tagline };
+  return { html: `${split}<div class="tips" style="margin-top:16px">${m.boxes.map(resultBoxHtml).join("")}</div>`, card, key: base.key, base, model: m, pat };
+}
+
+/* 識別他人：由各風格的作答題數算出「可能的類型」 */
+function othersCalc(cnt) {
+  const n = TYPES.reduce((a, t) => a + cnt[t], 0), pct = {}; TYPES.forEach(t => pct[t] = Math.round(cnt[t] / n * 100));
+  const ranked = [...TYPES].sort((a, b) => cnt[b] - cnt[a] || TYPES.indexOf(a) - TYPES.indexOf(b));
+  let cands = ranked.filter(t => cnt[t] > 0 && pct[ranked[0]] - pct[t] <= OTHERS_CLOSE_GAP);
+  // 只列第一、第二比重的類型（第三名以後可能性較低）；若與第二名同分，則一併列出，避免任意取捨
+  if (cands.length > 2) cands = cands.filter(t => cnt[t] >= cnt[cands[1]]);
+  return { n, pct, cands, gapPct: pct[cands[0]] - pct[cands[cands.length - 1]] };
+}
+function othersModel(cands) {
+  const top = cands[0];
+  if (cands.length < 2) return { key: "o1:" + top, title: TNAME[top], tagline: PROFILE[top].short, boxes: [] };
+  const items = cands.map(t => `${TLABEL[t]} 型`), list = items.slice(0, -1).join("、") + "或 " + items[items.length - 1];
+  return {
+    key: cands.length === 2 ? "o2:" + dualKey(cands[0], cands[1]) : "o2:multi", title: list,
+    tagline: "這幾個類型的比重很接近（{gap}），目前還不足以判斷是哪一種",
+    boxes: [{ id: "watch", title: "可能需要搭配更多觀察", body: cands.map(t => `- **${TLABEL[t]} ${TNAME[t]}**：${PROFILE[t].short}`).join("\n") + "\n\n建議再多觀察這個人在不同情境（開會、閒聊、遇到壓力或變動時）的表現，再判斷更貼近哪一種。" }]
+  };
+}
+/* 識別他人結果卡片的主要內容（前台結果頁與後台預覽共用）；note＝底部藍色提示框文字（後台「測評開頭文字」可編輯）*/
+function othersResultHtml(cnt, ovrMap, note) {
+  const { n, pct, cands, gapPct } = othersCalc(cnt), multi = cands.length > 1;
+  const base = othersModel(cands);
+  const m = applyResultOvr(base, (ovrMap || {})[base.key], { gap: gapPct === 0 ? "比重相同" : `最高與最低相差 ${gapPct}%` });
+  const head = `<div class="row" style="gap:20px"><div class="styleBadge">${cands.map(t => `<span class="t-${t}" style="color:var(--c)">${TLABEL[t]}</span>`).join(multi ? `<span class="muted" style="font-size:.5em;margin:0 6px">／</span>` : "")}</div>
+      <div><h2 style="margin:0">${esc(m.title)}</h2><p class="muted" style="margin:0">${esc(m.tagline)}</p></div></div>`;
+  const html = `<p class="muted">依據你的 ${n} 題觀察，這個人${multi ? "可能是" : "最可能的主型是"}</p>
+    ${MASCOT_ON ? `<div class="res-head">${mkStage(cands)}<div class="res-text">${head}</div></div>` : head}
+    <h3 style="margin-top:18px">四種風格的可能比重</h3>${barsHtml(pct, "%")}
+    ${m.boxes.map(b => `<div class="notice small watch" style="margin-top:12px"><b>${esc(b.title)}</b>${rbody(b.body)}</div>`).join("")}
+    ${n < 6 ? `<p class="notice small">作答題數較少，結果僅供參考。</p>` : ""}
+    ${(note || "").trim() ? `<div class="callout info" style="margin-top:16px">${md(note.trim())}</div>` : ""}`;
+  return { html, base, model: m, n, cands, multi };
+}

@@ -24,8 +24,8 @@ $("#logout").onclick = () => { store.del("admin_pw"); PW = null; loginView(); };
 /* ---------- 版型 ---------- */
 const NAV = [
   ["settings", "基本設定"], ["home", "首頁內容"], ["_", "解密工具"], ["tools", "教材管理"],
-  ["_", "看懂自己"], ["introSelf", "測評開頭文字"], ["self", "題目與設定"], ["results", "填答者結果"], ["report", "彙總報表"], ["logicSelf", "計分邏輯"],
-  ["_", "識別他人"], ["introOthers", "測評開頭文字"], ["others", "題目管理"], ["logicOthers", "計分邏輯"],
+  ["_", "看懂自己"], ["introSelf", "測評開頭文字"], ["self", "題目與設定"], ["selfTypes", "結果類型內容"], ["results", "填答者結果"], ["report", "彙總報表"], ["logicSelf", "計分邏輯"],
+  ["_", "識別他人"], ["introOthers", "測評開頭文字"], ["others", "題目管理"], ["othersTypes", "結果類型內容"], ["logicOthers", "計分邏輯"],
   ["_", "彈性調適"], ["types", "四型基本應對"], ["combos", "應對神器建議"]
 ];
 function shell() {
@@ -36,7 +36,7 @@ function shell() {
 async function boot() { CFG = await A("admin_get_config"); shell(); render(); }
 async function render() {
   const v = $("#view"); v.innerHTML = `<p class="muted">載入中…</p>`;
-  try { await ({ settings: vSettings, home: vHome, introSelf: () => vIntro("self"), introOthers: () => vIntro("others"), tools: vTools, self: () => vQuestions("self"), others: () => vQuestions("others"), results: vResults, report: vReport, logicSelf: () => vLogic("self"), logicOthers: () => vLogic("others"), types: vTypes, combos: vCombos }[view])(); }
+  try { await ({ settings: vSettings, home: vHome, introSelf: () => vIntro("self"), introOthers: () => vIntro("others"), tools: vTools, self: () => vQuestions("self"), others: () => vQuestions("others"), selfTypes: () => vResultTypes("self"), othersTypes: () => vResultTypes("others"), results: vResults, report: vReport, logicSelf: () => vLogic("self"), logicOthers: () => vLogic("others"), types: vTypes, combos: vCombos }[view])(); }
   catch (e) { if (/unauthorized|28000/.test(e.message)) { store.del("admin_pw"); loginView("登入已失效，請重新登入"); } else v.innerHTML = `<div class="card"><h2>載入失敗</h2><p class="muted">${esc(e.message)}</p></div>`; }
 }
 
@@ -443,6 +443,72 @@ async function vReport() {
     <p class="muted small">僅統計使用新版測評（含風格代碼）的紀錄。12 種為「單一主型」（可帶輔型）；分數接近的雙型並重、三型並重、四型均衡（判讀與學員結果頁一致）只在有人出現時才列出。</p></div>`;
   bindScope();
   bindScatter($("#scatterWrap"), $("#toggleNames"), !!bindScatter.show); // 切換統計範圍重新繪圖後，維持上次的「顯示姓名」狀態
+}
+
+/* ---------- 結果類型內容（看懂自己／識別他人）：預覽每一種結果類型，並可修改文字 ---------- */
+const rtSel = { self: "style:D", others: "o1:D" };
+async function vResultTypes(kind) {
+  const isSelf = kind === "self", siteKey = isSelf ? "self_results" : "others_results", keys = isSelf ? SELF_TYPE_KEYS : OTHERS_TYPE_KEYS;
+  const siteRows = await select("site_content", "select=key,data"), siteMap = Object.fromEntries(siteRows.map(r => [r.key, r.data]));
+  const amap = Object.fromEntries((await select("adapt_content", "select=key,data")).map(r => [r.key, r.data]));
+  MASCOT_ON = !(siteMap["mascot"] && siteMap["mascot"].enabled === false); // 預覽與前台一致：吉祥物關閉時預覽也不顯示
+  const note = getIntro(siteMap, "others").resultNote;
+  let ovrMap = siteMap[siteKey] || {};
+  if (!keys.includes(rtSel[kind])) rtSel[kind] = keys[0];
+  const groups = isSelf
+    ? [["單一主型（可帶輔型）", keys.filter(k => k.startsWith("style:"))], ["雙型並重", keys.filter(k => k.startsWith("dual:"))], ["三型並重", keys.filter(k => k.startsWith("triple:"))], ["四型均衡", ["quad"]]]
+    : [["單一最可能的類型", keys.filter(k => k.startsWith("o1:"))], ["兩個類型接近", keys.filter(k => k.startsWith("o2:"))]];
+  const sampleR = key => { const scores = SELF_SAMPLE[key]; return { scores, style: key.startsWith("style:") ? key.slice(6) : judgeStyle(scores, 10).style }; };
+  const baseOf = key => isSelf ? selfModel(sampleR(key), analyzeScores(SELF_SAMPLE[key]), amap) : othersModel(othersCalc(OTHERS_SAMPLE[key]).cands);
+  const sameJson = (a, b) => JSON.stringify(a || {}) === JSON.stringify(b || {});
+
+  const draw = () => {
+    const sel = rtSel[kind], base = baseOf(sel), cur = ovrMap[sel] || {}, cb = cur.boxes || {};
+    const val = (o, k, d) => o && o[k] != null ? o[k] : d;
+    $("#view").innerHTML = `<div class="card"><h2>${isSelf ? "「看懂自己」" : "「識別他人」"}結果類型內容</h2>
+      <p class="muted">預覽每一種測評結果類型的畫面（用範例資料呈現），並可修改文字。沒改過的欄位沿用預設內容；其中風格說明的預設內容來自「彈性調適 → 四型基本應對」，修改那裡會連動沒改過的欄位。<span class="small">「●」＝這個類型有自訂內容。</span></p>
+      ${groups.map(([name, ks]) => `<h3 style="margin-top:14px">${name}</h3><div class="row" style="gap:8px">${ks.map(k => `<button class="${k === sel ? "" : "ghost"} sm" data-rt="${k}">${esc(resultTypeLabel(k))}${ovrMap[k] ? " ●" : ""}</button>`).join("")}</div>`).join("")}</div>
+    <div class="card" id="rtEditor" style="margin-top:16px"><div class="row between"><h2>${esc(resultTypeLabel(sel))} ${ovrMap[sel] ? `<span class="pill" style="background:var(--brand)">已自訂</span>` : `<span class="small muted">（預設）</span>`}</h2></div>
+      <label class="f">標題</label><input type="text" id="rtTitle" value="${esc(val(cur, "title", base.title))}">
+      <label class="f">說明文字（標題下方）</label><textarea id="rtTagline" style="min-height:64px">${esc(val(cur, "tagline", base.tagline))}</textarea>
+      <p class="small muted" style="margin:4px 0 0">可用代號：<code>{gap}</code>＝${isSelf ? "分數差距（例如「相差 3 分」「分數相同」）" : "比重差距（例如「最高與最低相差 10%」「比重相同」）"}${isSelf ? "；<code>{spread}</code>＝四型分數最高與最低的差距（只用在四型均衡）" : ""}。</p>
+      ${base.boxes.length ? base.boxes.map((b, i) => `<div class="blockedit"><b>區塊 ${i + 1}</b>
+        <label class="f">區塊標題</label><input type="text" data-bt="${b.id}" value="${esc(val(cb[b.id], "title", b.title))}">
+        <label class="f">內容</label><textarea data-bb="${b.id}" style="min-height:${b.body.split("\n").length > 4 ? 150 : 96}px">${esc(val(cb[b.id], "body", b.body))}</textarea></div>`).join("")
+        : `<p class="muted" style="margin-top:12px">這個類型只有標題與說明文字，沒有額外的說明區塊。</p>`}
+      <p class="small muted" style="margin:10px 0 0">內容格式：空一行＝新的一段；以「- 」開頭的行＝清單；<code>**粗體**</code>。</p>
+      <div class="row" style="margin-top:14px"><button id="rtSave">💾 儲存此類型</button><button class="ghost" id="rtReset" ${ovrMap[sel] ? "" : "disabled"}>還原此類型預設</button></div></div>
+    <div class="card" style="margin-top:16px"><div class="row between"><h2>預覽</h2><span class="small muted">${isSelf ? `範例分數：${CIRCLE.map(t => `${TLABEL[t]} ${SELF_SAMPLE[sel][t]}`).join("、")}` : `範例：作答 10 題，${CIRCLE.map(t => `${TLABEL[t]} ${OTHERS_SAMPLE[sel][t]} 題`).join("、")}`}</span></div>
+      <div class="narrow" style="margin-top:8px"><div class="card" id="rtPreview"></div></div></div>`;
+
+    // 目前表單內容 → 只保留與預設不同的欄位
+    const draft = () => {
+      const o = {}, t = $("#rtTitle").value, g = $("#rtTagline").value; if (t !== base.title) o.title = t; if (g !== base.tagline) o.tagline = g;
+      const boxes = {}; base.boxes.forEach(b => { const x = {}, bt = $(`[data-bt="${b.id}"]`).value, bb = $(`[data-bb="${b.id}"]`).value.replace(/\r\n/g, "\n"); if (bt !== b.title) x.title = bt; if (bb !== b.body) x.body = bb; if (Object.keys(x).length) boxes[b.id] = x; });
+      if (Object.keys(boxes).length) o.boxes = boxes; return o;
+    };
+    const preview = () => {
+      const o = { [sel]: draft() };
+      $("#rtPreview").innerHTML = isSelf
+        ? `<p class="muted">範例同學 的 DiSC 風格</p>${selfResultHtml(sampleR(sel), amap, o).html}`
+        : othersResultHtml(OTHERS_SAMPLE[sel], o, note).html;
+    };
+    preview();
+    $$("#rtEditor input, #rtEditor textarea").forEach(el => el.oninput = preview);
+    $$("[data-rt]").forEach(b => b.onclick = () => {
+      if (!sameJson(draft(), ovrMap[sel]) && !confirm("目前的修改尚未儲存，要放棄並切換類型嗎？")) return;
+      rtSel[kind] = b.dataset.rt; draw();
+    });
+    const persist = async o => {
+      const fresh = (await select("site_content", `key=eq.${siteKey}&select=key,data`))[0], map = { ...((fresh && fresh.data) || {}) };
+      if (o && Object.keys(o).length) map[sel] = o; else delete map[sel];
+      if (Object.keys(map).length) await A("admin_upsert_site", { p_key: siteKey, p_data: map }); else await A("admin_delete_site", { p_key: siteKey });
+      ovrMap = map; toast("已儲存"); draw();
+    };
+    $("#rtSave").onclick = e => busy(e.target, () => persist(draft()));
+    $("#rtReset").onclick = e => { if (confirm("還原這個類型的預設內容？你修改過的文字會被清除。")) busy(e.target, () => persist(null)); };
+  };
+  draw();
 }
 
 /* ---------- 計分邏輯 ---------- */
