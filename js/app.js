@@ -42,7 +42,7 @@ function renderFooter() {
 /* ---------- 路由 ---------- */
 async function route() {
   const [, page, arg] = (location.hash || "#/").split("/");
-  window.scrollTo(0, 0);
+  window.scrollTo(0, 0); setImm(false);
   const pf = FEATURES.find(x => x.id === page);
   footerHome = !pf || !isUnlocked(pf.id); // 首頁，或被鎖住而退回首頁畫面時，都用首頁的版權文字
   renderFooter();
@@ -148,70 +148,146 @@ async function selfPage() {
   if (prev) return selfShowSaved(prev);
   selfIntro();
 }
-function selfShowSaved(r) {
+function selfShowSaved(r, reveal) {
+  setImm(false);
   if (r.hidden) {
     app.innerHTML = `<div class="narrow" style="margin:auto">${back()}<div class="card" style="text-align:center">
       <div style="font-size:48px">✅</div><h2>${esc(r.user_name)}，你已完成測評</h2>
       <p class="muted">講師目前尚未公開測評結果，請於課堂中一起揭曉！</p>
       <button class="ghost" id="redo">重新測驗</button></div></div>`;
-  } else return selfResult(r, true);
+  } else return selfResult(r, true, false, reveal);
   $("#redo").onclick = () => { if (confirm("重新測驗會覆蓋原本的紀錄，確定嗎？")) selfIntro(); };
 }
 /* 測評開頭區塊（看懂自己／識別他人共用，文字由後台「開頭文字」編輯）*/
 const introHtml = I => `<h1>${esc(I.title)}</h1><p class="muted">${esc(I.subtitle)}</p>
   ${I.notices.length ? `<div class="notice">${I.noticeTitle ? `<b>${esc(I.noticeTitle)}</b>` : ""}<ul>${I.notices.map(n => `<li>${md(n).replace(/^<p>|<\/p>$/g, "")}</li>`).join("")}</ul></div>` : ""}
   ${I.howTitle ? `<h3 style="margin-top:16px">${esc(I.howTitle)}</h3>` : ""}${I.howText ? md(I.howText) : ""}`;
+/* ---------- 看懂自己：沉浸式畫面（開場須知 → 準備儀式 → 逐題作答 → 結算）---------- */
+const setImm = on => document.body.classList.toggle("imm", !!on);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const reduceMotion = () => matchMedia("(prefers-reduced-motion: reduce)").matches;
+const ORB_SVG = `<svg viewBox="0 0 120 120" class="orb-svg" aria-hidden="true">
+  <g class="oq oq-d"><path d="M60 60V6A54 54 0 0 0 6 60Z" fill="var(--D)"/><text x="32" y="43">D</text></g>
+  <g class="oq oq-i"><path d="M60 60H114A54 54 0 0 0 60 6Z" fill="var(--I)"/><text x="88" y="43">i</text></g>
+  <g class="oq oq-s"><path d="M60 60V114A54 54 0 0 0 114 60Z" fill="var(--S)"/><text x="88" y="90">S</text></g>
+  <g class="oq oq-c"><path d="M60 60H6A54 54 0 0 0 60 114Z" fill="var(--C)"/><text x="32" y="90">C</text></g></svg>`;
+const orbHtml = (cls = "") => `<div class="orb ${cls}" aria-hidden="true"><i class="orb-glow"></i>${ORB_SVG}</div>`;
+
 function selfIntro() {
-  const I = getIntro(SITE, "self");
-  app.innerHTML = `<div class="narrow" style="margin:auto">${back()}<div class="card">${introHtml(I)}
-    <label class="f" for="nm">${esc(I.nameLabel)}</label>
-    <input type="text" id="nm" maxlength="30" placeholder="${esc(I.namePlaceholder)}" value="${esc(store.get("disc_name", ""))}">
-    <div class="row between" style="margin-top:16px"><span></span><button id="go" disabled>${esc(I.startBtn)}</button></div></div></div>`;
-  const nm = $("#nm"), go = $("#go");
-  nm.oninput = () => go.disabled = !nm.value.trim();
-  nm.onkeydown = e => { if (e.key === "Enter" && !go.disabled) go.click(); };
-  go.disabled = !nm.value.trim();
-  go.onclick = async () => {
-    go.disabled = true; go.textContent = "載入題目…";
-    store.set("disc_name", nm.value.trim());
-    try {
-      selfQs = await select("questions", "kind=eq.self&order=sort.asc,updated_at.asc");
-      if (selfQs.length < 3) { toast("題目數量不足，請聯絡講師"); go.disabled = false; go.textContent = I.startBtn; return; }
-      const qs = (cfg.randomize ? shuffle(selfQs) : selfQs).map(q => ({ ...q, options: shuffle(q.options) }));
-      selfRun = { name: nm.value.trim(), qs, cur: 0, ans: {} };
-      selfQuestion();
-    } catch (e) { toast("載入失敗：" + e.message); go.disabled = false; go.textContent = I.startBtn; }
+  setImm(true);
+  const I = getIntro(SITE, "self"), notices = I.notices || [], exOpts = I.exampleOptions || [];
+  const title = String(I.title || "看懂自己").replace(/^[^\p{L}\p{N}]+/u, "").trim() || "看懂自己";
+  const inline = s => md(s).replace(/^<p>|<\/p>$/g, "");
+  app.innerHTML = `<div class="imm-wrap">
+    <a class="imm-back" href="#/">← 回首頁</a>
+    <header class="imm-hero">${orbHtml()}<p class="imm-kicker">DiSC SELF-DISCOVERY</p><h1>${esc(title)}</h1><p class="imm-sub">${esc(I.subtitle)}</p></header>
+    ${notices.length ? `<section class="imm-card imm-step" id="stepNotice">
+      <div class="imm-head"><span class="imm-n">1</span><div><h2>${esc(I.noticeTitle || "施測前請留意")}</h2><p class="small muted">請逐項點選確認，表示你已理解</p></div><span class="imm-count" id="chkCount">0 / ${notices.length}</span></div>
+      <div class="imm-checks">${notices.map((n, i) => `<label class="imm-check"><span class="imm-num">${i + 1}</span><span class="imm-txt">${inline(n)}</span><input type="checkbox"><span class="imm-box" aria-hidden="true"></span></label>`).join("")}</div>
+      <p class="imm-hint" id="chkHint">全部確認後，才能繼續往下作答 ↓</p></section>` : ""}
+    <section class="imm-card imm-step imm-lock" id="stepHow">
+      <div class="imm-head"><span class="imm-n">${notices.length ? 2 : 1}</span><div><h2>${esc(I.howTitle || "作答方式")}</h2></div></div>
+      ${I.howText ? `<div class="imm-how">${md(I.howText)}</div>` : ""}
+      ${exOpts.length ? `<div class="imm-ex"><span class="imm-ex-tag">${esc(I.exampleTitle || "填答範例")}</span><h3>${esc(I.examplePrompt || "")}</h3>
+        ${exOpts.map((t, i) => `<div class="opt imm-opt"><span class="lbl">${esc(t)}</span>
+          <button type="button" class="mark most" data-k="most" data-i="${i}">最像我</button><button type="button" class="mark least" data-k="least" data-i="${i}">最不像我</button></div>`).join("")}
+        <p class="imm-ex-status" id="exStatus"></p>${I.exampleNote ? `<p class="small muted" style="margin:6px 0 0">${esc(I.exampleNote)}</p>` : ""}</div>` : ""}
+    </section>
+    <section class="imm-card imm-step imm-lock" id="stepName">
+      <div class="imm-head"><span class="imm-n">${notices.length ? 3 : 2}</span><div><h2>${esc(I.nameLabel || "你的姓名")}</h2></div></div>
+      <input type="text" id="nm" maxlength="30" placeholder="${esc(I.namePlaceholder)}" value="${esc(store.get("disc_name", ""))}" aria-label="${esc(I.nameLabel || "你的姓名")}">
+      <div class="imm-gorow"><button id="go" class="imm-go" disabled>${esc(I.startBtn)}</button><p class="imm-gohint small muted" id="goHint"></p></div>
+    </section></div>`;
+  const nm = $("#nm"), go = $("#go"), checks = $$(".imm-check input"), stepsLocked = $$(".imm-lock");
+  let opened = !notices.length;
+  const refresh = () => {
+    const ok = checks.filter(c => c.checked).length, all = ok === checks.length;
+    $$(".imm-check").forEach((l, i) => l.classList.toggle("on", checks[i].checked));
+    if (checks.length) { $("#chkCount").textContent = `${ok} / ${checks.length}`; $("#chkCount").classList.toggle("done", all); $("#chkHint").textContent = all ? "✓ 已全部確認，請繼續往下" : "全部確認後，才能繼續往下作答 ↓"; $("#stepNotice").classList.toggle("done", all); }
+    if (all && !opened) { opened = true; stepsLocked.forEach(s => s.classList.remove("imm-lock")); setTimeout(() => $("#stepHow").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" }), 250); }
+    if (!opened) stepsLocked.forEach(s => s.classList.add("imm-lock"));
+    const hasName = !!nm.value.trim();
+    go.disabled = !(all && hasName);
+    $("#goHint").textContent = !all ? "請先確認上方所有要點" : !hasName ? "請輸入姓名後開始" : "";
   };
+  checks.forEach(c => c.onchange = refresh); nm.oninput = refresh;
+  nm.onkeydown = e => { if (e.key === "Enter" && !go.disabled) go.click(); };
+  // 填答範例：可以實際點點看（只是示範，不會記錄）
+  const ex = { most: exOpts.length > 1 ? 1 : null, least: exOpts.length > 2 ? 2 : null };
+  const drawEx = () => {
+    $$(".imm-ex .opt").forEach((row, i) => { row.classList.toggle("has-most", ex.most === i); row.classList.toggle("has-least", ex.least === i);
+      $(".most", row).classList.toggle("on", ex.most === i); $(".least", row).classList.toggle("on", ex.least === i);
+      $(".most", row).disabled = ex.least === i; $(".least", row).disabled = ex.most === i; });
+    const st = $("#exStatus"); if (!st) return;
+    st.className = "imm-ex-status" + (ex.most !== null && ex.least !== null ? " ok" : "");
+    st.textContent = ex.most !== null && ex.least !== null ? "✓ 各選一個「最像我」與「最不像我」，這一題就完成了" : `還差一步：請再選出${ex.most === null ? "「最像我」" : "「最不像我」"}`;
+  };
+  $$(".imm-ex .mark").forEach(b => b.onclick = () => { const k = b.dataset.k, i = +b.dataset.i; ex[k] = ex[k] === i ? null : i; drawEx(); });
+  drawEx(); refresh();
+  go.onclick = () => { store.set("disc_name", nm.value.trim()); selfStart(I, nm.value.trim()); };
 }
-function selfQuestion() {
-  const r = selfRun, q = r.qs[r.cur], a = r.ans[q.id] || (r.ans[q.id] = { most: null, least: null });
-  app.innerHTML = `<div class="narrow" style="margin:auto"><div class="card">
-    <div class="row between small muted"><span>第 ${r.cur + 1} / ${r.qs.length} 題</span><span>⏱ 建議 5 分鐘內完成</span></div>
-    <div class="progress" style="margin:8px 0 16px"><i style="width:${r.cur / r.qs.length * 100}%"></i></div>
-    <h2>${esc(q.prompt)}</h2>
-    ${q.options.map((o, i) => `<div class="opt"><span class="lbl">${esc(o.text)}</span>
-      <button class="mark most ${a.most === i ? "on" : ""}" data-k="most" data-i="${i}" ${a.least === i ? "disabled" : ""}>最像我</button>
-      <button class="mark least ${a.least === i ? "on" : ""}" data-k="least" data-i="${i}" ${a.most === i ? "disabled" : ""}>最不像我</button></div>`).join("")}
-    <div class="row between" style="margin-top:18px"><button class="ghost" id="prev" ${r.cur === 0 ? "disabled" : ""}>上一題</button>
-      <button id="next" ${a.most === null || a.least === null ? "disabled" : ""}>${r.cur === r.qs.length - 1 ? "完成，查看結果" : "下一題"}</button></div></div></div>`;
+/* 準備儀式（約 4 秒，可略過）：同時在背景載入題目 */
+async function selfStart(I, name) {
+  const loading = select("questions", "kind=eq.self&order=sort.asc,updated_at.asc").catch(e => e);
+  await selfReady();
+  const rows = await loading;
+  if (!Array.isArray(rows) || rows.length < 3) { toast(Array.isArray(rows) ? "題目數量不足，請聯絡講師" : "載入失敗：" + rows.message); return selfIntro(); }
+  selfQs = rows;
+  const qs = (cfg.randomize ? shuffle(selfQs) : selfQs).map(q => ({ ...q, options: shuffle(q.options) }));
+  selfRun = { name, qs, cur: 0, ans: {} };
+  selfQuestion(true);
+}
+function selfReady() {
+  return new Promise(resolve => {
+    setImm(true);
+    app.innerHTML = `<div class="imm-ready">${orbHtml("orb-big breathe")}
+      <p class="imm-line l1">深呼吸，放鬆一下</p><p class="imm-line l2">想著「平常工作中，最自然的你」</p><p class="imm-line l3">不用多想，依第一直覺作答</p>
+      <button type="button" class="ghost sm imm-skip" id="skip">略過</button></div>`;
+    const done = () => { clearTimeout(t); resolve(); }, t = setTimeout(done, reduceMotion() ? 1200 : 4200);
+    $("#skip").onclick = done;
+  });
+}
+function selfQuestion(fresh) {
+  setImm(true);
+  const r = selfRun, q = r.qs[r.cur], a = r.ans[q.id] || (r.ans[q.id] = { most: null, least: null }), n = r.qs.length;
+  app.innerHTML = `<div class="imm-q">
+    <div class="imm-top"><a class="imm-exit" href="#/" id="exit">離開</a>
+      <div class="imm-pips" role="img" aria-label="第 ${r.cur + 1} / ${n} 題">${r.qs.map((_, i) => `<i class="pip pc${i % 4} ${i < r.cur ? "done" : i === r.cur ? "now" : ""}"></i>`).join("")}</div>
+      <span class="imm-no">${r.cur + 1}<small> / ${n}</small></span></div>
+    <div class="imm-card imm-qcard${fresh ? " fresh" : ""}">
+      <p class="imm-qlabel">第 ${r.cur + 1} 題</p><h2>${esc(q.prompt)}</h2>
+      <p class="imm-tip">請從下面四個描述中，各選一個「最像我」與「最不像我」</p>
+      ${q.options.map((o, i) => `<div class="opt imm-opt ${a.most === i ? "has-most" : ""} ${a.least === i ? "has-least" : ""}"><span class="lbl">${esc(o.text)}</span>
+        <button class="mark most ${a.most === i ? "on" : ""}" data-k="most" data-i="${i}" ${a.least === i ? "disabled" : ""}>最像我</button>
+        <button class="mark least ${a.least === i ? "on" : ""}" data-k="least" data-i="${i}" ${a.most === i ? "disabled" : ""}>最不像我</button></div>`).join("")}
+      <div class="row between" style="margin-top:22px"><button class="ghost" id="prev" ${r.cur === 0 ? "disabled" : ""}>上一題</button>
+        <button id="next" class="imm-next" ${a.most === null || a.least === null ? "disabled" : ""}>${r.cur === n - 1 ? "完成，查看結果" : "下一題"}</button></div></div></div>`;
+  $("#exit").onclick = e => { if (!confirm("離開後，目前的作答不會保留，確定要離開嗎？")) e.preventDefault(); };
   $$(".mark").forEach(b => b.onclick = () => { const k = b.dataset.k, i = +b.dataset.i; a[k] = a[k] === i ? null : i; selfQuestion(); });
-  $("#prev").onclick = () => { r.cur--; selfQuestion(); };
-  $("#next").onclick = () => { if (r.cur < r.qs.length - 1) { r.cur++; selfQuestion(); } else selfSubmit(); };
+  $("#prev").onclick = () => { r.cur--; selfQuestion(true); };
+  $("#next").onclick = () => { if (r.cur < n - 1) { r.cur++; selfQuestion(true); } else selfSubmit(); };
 }
 async function selfSubmit() {
   const r = selfRun;
   const { scores } = scoreAnswers(r.qs, r.ans);
   const j = judgeStyle(scores, cfg.secondary_gap);
   const answers = {}; r.qs.forEach(q => { const a = r.ans[q.id]; answers[q.id] = [q.options[a.most].type, q.options[a.least].type]; });
-  app.innerHTML = `<div class="card" style="text-align:center"><p>計算並儲存結果中…</p></div>`;
+  setImm(true);
+  const lines = ["正在整理你的作答…", "計算四種風格的分數…", "繪製專屬於你的 DiSC 圖…"];
+  app.innerHTML = `<div class="imm-ready">${orbHtml("orb-big assemble")}<p class="imm-line show" id="calcLine">${lines[0]}</p></div>`;
+  let li = 0; const tick = setInterval(() => { li = Math.min(li + 1, lines.length - 1); const el = $("#calcLine"); if (el) el.textContent = lines[li]; }, 900);
+  const t0 = performance.now();
   try {
     await rpc("submit_result", { p_client: clientId, p_name: r.name, p_answers: answers, p_scores: scores, p_style: j.style, p_primary: j.secondary ? [j.primary, j.secondary] : [j.primary] });
   } catch (e) {
+    clearInterval(tick); setImm(false);
     app.innerHTML = `<div class="card"><h2>⚠️ 結果儲存失敗</h2><p class="muted">${esc(e.message)}</p><button id="retry">重試</button></div>`;
     $("#retry").onclick = selfSubmit; return;
   }
   const res = await rpc("get_my_result", { p_client: clientId });
-  selfShowSaved(res);
+  await sleep(Math.max(0, (reduceMotion() ? 600 : 2700) - (performance.now() - t0))); // 讓「繪製專屬於你的 DiSC 圖」的過場至少播完
+  clearInterval(tick);
+  selfShowSaved(res, true);
 }
 function feedbackBlock(r) {
   const val = r.accuracy_feedback || 3, locked = !!r.accuracy_feedback;
@@ -291,14 +367,15 @@ async function resultCard(c) {
   document.body.appendChild(m);
   $("#cardClose", m).onclick = () => m.remove(); m.onclick = e => { if (e.target === m) m.remove(); };
 }
-async function selfResult(r, saved, demo) {
+async function selfResult(r, saved, demo, reveal) {
+  setImm(false);
   adaptMap = await loadAdaptMap();
   if (!demo) store.sset("my_style", r.style);
   const sr = getSelfResult(SITE), hl = (sr.highlight || "").trim(); // 後台「看懂自己 → 題目與設定」可調整
   // 結果頁內容（含後台「結果類型內容」的文字覆寫）由 selfResultHtml 產生（common.js）
   const { html, card } = selfResultHtml(r, adaptMap, SITE["self_results"]);
   card.name = r.user_name;
-  app.innerHTML = `<div class="narrow" style="margin:auto">${back()}<div class="card">
+  app.innerHTML = `<div class="narrow" style="margin:auto">${back()}<div class="card${reveal ? " reveal" : ""}">
     <p class="muted">${esc(r.user_name)} 的 DiSC 風格</p>
     ${html}
     <p class="muted small" style="margin-top:14px">最後測評時間：${new Date(r.updated_at).toLocaleString("zh-TW")}。DiSC 描述的是行為傾向，會隨情境變化，結果僅供參考。</p>
