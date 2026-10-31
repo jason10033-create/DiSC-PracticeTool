@@ -456,3 +456,20 @@ html:has(body.imm) { overflow-x:hidden; }
 .imm-go:disabled { background:var(--surface2); color:var(--muted); }
 .pip.done.pc0, .pip.done.pc1, .pip.done.pc2, .pip.done.pc3 { background:var(--brand); }
 @media (max-width:560px) { .imm-ex .imm-opt { grid-template-columns:1fr auto auto; } .imm-ex .imm-opt .mark { justify-self:auto; } }
+/* ---- 逐題作答：進度、題目、四個選項、上一題／下一題全部控制在一個視窗高度內（不需捲動）---- */
+body.imm .wrap { padding-bottom:12px; }
+.imm-q { max-width:760px; height:calc(100vh - 84px); height:calc(100dvh - 84px); min-height:460px; display:flex; flex-direction:column; }
+.imm-top { flex:none; }
+.imm-qcard { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; margin-top:10px; padding:clamp(14px,2.6vh,28px) clamp(16px,3vw,30px); border-radius:24px; }
+.imm-qcard h2 { font-size:clamp(18px,3.4vh,28px); margin:0 0 4px; line-height:1.4; flex:none; }
+.imm-tip { flex:none; font-size:clamp(12px,1.8vh,14px); margin:0 0 clamp(6px,1.4vh,12px); }
+.imm-opts { flex:1 1 auto; min-height:0; display:flex; flex-direction:column; gap:clamp(6px,1.3vh,12px); justify-content:center; }
+.imm-opts .imm-opt { flex:1 1 0; min-height:48px; max-height:110px; margin-top:0; padding:0 clamp(12px,2vw,18px); display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:10px; }
+.imm-opts .imm-opt .lbl { font-size:clamp(14px,2.3vh,17px); line-height:1.4; }
+.imm-opts .imm-opt .mark { padding:clamp(5px,1vh,8px) clamp(10px,1.6vw,14px); font-size:clamp(12px,1.8vh,14px); }
+.imm-nav { flex:none; display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:clamp(10px,2vh,18px); }
+@media (max-width:560px) {
+  .imm-opts .imm-opt { grid-template-columns:1fr 1fr; padding:8px 12px; gap:6px 8px; max-height:none; }
+  .imm-opts .imm-opt .lbl { grid-column:1 / -1; }
+  .imm-opts .imm-opt .mark { justify-self:stretch; justify-content:center; }
+}

@@ -199,6 +199,7 @@ function selfIntro() {
       <input type="text" id="nm" maxlength="30" placeholder="${esc(I.namePlaceholder)}" value="${esc(store.get("disc_name", ""))}" aria-label="${esc(I.nameLabel || "你的姓名")}">
       <div class="imm-gorow"><button id="go" class="imm-go" disabled>${esc(I.startBtn)}</button><p class="imm-gohint small muted" id="goHint"></p></div>
     </section></div>`;
+  window.scrollTo({ top: 0, behavior: "instant" }); // 重新測驗時（例如從結果頁按「重新測驗」）一律從最上方開始
   const nm = $("#nm"), go = $("#go"), checks = $$(".imm-check input"), stepsLocked = $$(".imm-lock");
   let opened = !notices.length;
   const refresh = () => {
@@ -233,13 +234,14 @@ function selfQuestion(fresh) {
       <div class="imm-pips" role="img" aria-label="第 ${r.cur + 1} / ${n} 題">${r.qs.map((_, i) => `<i class="pip pc${i % 4} ${i < r.cur ? "done" : i === r.cur ? "now" : ""}"></i>`).join("")}</div>
       <span class="imm-no">${r.cur + 1}<small> / ${n}</small></span></div>
     <div class="imm-card imm-qcard${fresh ? " fresh" : ""}">
-      <p class="imm-qlabel">第 ${r.cur + 1} 題</p><h2>${esc(q.prompt)}</h2>
+      <h2>${esc(q.prompt)}</h2>
       <p class="imm-tip">請從下面四個描述中，各選一個「最像我」與「最不像我」</p>
-      ${q.options.map((o, i) => `<div class="opt imm-opt ${a.most === i ? "has-most" : ""} ${a.least === i ? "has-least" : ""}"><span class="lbl">${esc(o.text)}</span>
+      <div class="imm-opts">${q.options.map((o, i) => `<div class="opt imm-opt ${a.most === i ? "has-most" : ""} ${a.least === i ? "has-least" : ""}"><span class="lbl">${esc(o.text)}</span>
         <button class="mark most ${a.most === i ? "on" : ""}" data-k="most" data-i="${i}" ${a.least === i ? "disabled" : ""}>最像我</button>
-        <button class="mark least ${a.least === i ? "on" : ""}" data-k="least" data-i="${i}" ${a.most === i ? "disabled" : ""}>最不像我</button></div>`).join("")}
-      <div class="row between" style="margin-top:22px"><button class="ghost" id="prev" ${r.cur === 0 ? "disabled" : ""}>上一題</button>
+        <button class="mark least ${a.least === i ? "on" : ""}" data-k="least" data-i="${i}" ${a.most === i ? "disabled" : ""}>最不像我</button></div>`).join("")}</div>
+      <div class="imm-nav"><button class="ghost" id="prev" ${r.cur === 0 ? "disabled" : ""}>上一題</button>
         <button id="next" class="imm-next" ${a.most === null || a.least === null ? "disabled" : ""}>${r.cur === n - 1 ? "完成，查看結果" : "下一題"}</button></div></div></div>`;
+  if (fresh) window.scrollTo({ top: 0, behavior: "instant" });
   $("#exit").onclick = e => { if (!confirm("離開後，目前的作答不會保留，確定要離開嗎？")) e.preventDefault(); };
   $$(".mark").forEach(b => b.onclick = () => { const k = b.dataset.k, i = +b.dataset.i; a[k] = a[k] === i ? null : i; selfQuestion(); });
   $("#prev").onclick = () => { r.cur--; selfQuestion(true); };
