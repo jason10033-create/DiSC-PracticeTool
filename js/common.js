@@ -628,7 +628,8 @@ const DEFAULT_INTRO = {
     exampleTitle: "填答範例",
     examplePrompt: "在路上發現 1000 元時，我會？",
     exampleOptions: ["撿起來占為己有", "大聲問誰掉的錢", "裝作沒看到", "主動拿給相關單位"],
-    exampleNote: "這只是示範操作方式，答案沒有對錯。每題都要從四個描述中，各選出一個「最像我」和一個「最不像我」，同一個描述不能同時選兩次。",
+    exampleMost: 3,
+    exampleLeast: 0,
     nameLabel: "你的姓名",
     namePlaceholder: "例如：王小明",
     startBtn: "開始測評"

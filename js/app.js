@@ -176,22 +176,23 @@ const orbHtml = (cls = "") => `<div class="orb ${cls}" aria-hidden="true"><i cla
 function selfIntro() {
   setImm(true);
   const I = getIntro(SITE, "self"), notices = I.notices || [], exOpts = I.exampleOptions || [];
+  const exMost = I.exampleMost, exLeast = I.exampleLeast; // 填答範例固定的作答內容（選項編號）
   const title = String(I.title || "看懂自己").replace(/^[^\p{L}\p{N}]+/u, "").trim() || "看懂自己";
-  const inline = s => md(s).replace(/^<p>|<\/p>$/g, "");
+  // 粗體文字裡若含「」引號，不加螢光筆底線（加上 nq 類別）
+  const inline = s => md(s).replace(/^<p>|<\/p>$/g, "").replace(/<b>([^<]*「[^<]*)<\/b>/g, '<b class="nq">$1</b>');
   app.innerHTML = `<div class="imm-wrap">
     <a class="imm-back" href="#/">← 回首頁</a>
     <header class="imm-hero">${orbHtml()}<p class="imm-kicker">DiSC SELF-DISCOVERY</p><h1>${esc(title)}</h1><p class="imm-sub">${esc(I.subtitle)}</p></header>
     ${notices.length ? `<section class="imm-card imm-step" id="stepNotice">
-      <div class="imm-head"><span class="imm-n">1</span><div><h2>${esc(I.noticeTitle || "施測前請留意")}</h2><p class="small muted">請逐項點選確認，表示你已理解</p></div><span class="imm-count" id="chkCount">0 / ${notices.length}</span></div>
+      <div class="imm-head"><span class="imm-n">1</span><div><h2>${esc(I.noticeTitle || "施測前請留意")}</h2></div><span class="imm-count" id="chkCount">0 / ${notices.length}</span></div>
       <div class="imm-checks">${notices.map((n, i) => `<label class="imm-check"><span class="imm-num">${i + 1}</span><span class="imm-txt">${inline(n)}</span><input type="checkbox"><span class="imm-box" aria-hidden="true"></span></label>`).join("")}</div>
-      <p class="imm-hint" id="chkHint">全部確認後，才能繼續往下作答 ↓</p></section>` : ""}
+      <p class="imm-hint" id="chkHint">請逐項勾選確認，表示你已理解</p></section>` : ""}
     <section class="imm-card imm-step imm-lock" id="stepHow">
       <div class="imm-head"><span class="imm-n">${notices.length ? 2 : 1}</span><div><h2>${esc(I.howTitle || "作答方式")}</h2></div></div>
       ${I.howText ? `<div class="imm-how">${md(I.howText)}</div>` : ""}
-      ${exOpts.length ? `<div class="imm-ex"><span class="imm-ex-tag">${esc(I.exampleTitle || "填答範例")}</span><h3>${esc(I.examplePrompt || "")}</h3>
-        ${exOpts.map((t, i) => `<div class="opt imm-opt"><span class="lbl">${esc(t)}</span>
-          <button type="button" class="mark most" data-k="most" data-i="${i}">最像我</button><button type="button" class="mark least" data-k="least" data-i="${i}">最不像我</button></div>`).join("")}
-        <p class="imm-ex-status" id="exStatus"></p>${I.exampleNote ? `<p class="small muted" style="margin:6px 0 0">${esc(I.exampleNote)}</p>` : ""}</div>` : ""}
+      ${exOpts.length ? `<div class="imm-ex"><span class="imm-ex-tag">${esc(I.exampleTitle || "填答範例")}</span><div class="imm-ex-q"><h3>${esc(I.examplePrompt || "")}</h3>
+        ${exOpts.map((t, i) => `<div class="opt imm-opt${i === exMost ? " has-most" : ""}${i === exLeast ? " has-least" : ""}"><span class="lbl">${esc(t)}</span>
+          <span class="mark most${i === exMost ? " on" : ""}">最像我</span><span class="mark least${i === exLeast ? " on" : ""}">最不像我</span></div>`).join("")}</div></div>` : ""}
     </section>
     <section class="imm-card imm-step imm-lock" id="stepName">
       <div class="imm-head"><span class="imm-n">${notices.length ? 3 : 2}</span><div><h2>${esc(I.nameLabel || "你的姓名")}</h2></div></div>
@@ -203,49 +204,26 @@ function selfIntro() {
   const refresh = () => {
     const ok = checks.filter(c => c.checked).length, all = ok === checks.length;
     $$(".imm-check").forEach((l, i) => l.classList.toggle("on", checks[i].checked));
-    if (checks.length) { $("#chkCount").textContent = `${ok} / ${checks.length}`; $("#chkCount").classList.toggle("done", all); $("#chkHint").textContent = all ? "✓ 已全部確認，請繼續往下" : "全部確認後，才能繼續往下作答 ↓"; $("#stepNotice").classList.toggle("done", all); }
+    if (checks.length) { $("#chkCount").textContent = `${ok} / ${checks.length}`; $("#chkCount").classList.toggle("done", all); $("#stepNotice").classList.toggle("done", all); }
     if (all && !opened) { opened = true; stepsLocked.forEach(s => s.classList.remove("imm-lock")); setTimeout(() => $("#stepHow").scrollIntoView({ behavior: reduceMotion() ? "auto" : "smooth", block: "start" }), 250); }
     if (!opened) stepsLocked.forEach(s => s.classList.add("imm-lock"));
-    const hasName = !!nm.value.trim();
-    go.disabled = !(all && hasName);
-    $("#goHint").textContent = !all ? "請先確認上方所有要點" : !hasName ? "請輸入姓名後開始" : "";
+    go.disabled = !(all && nm.value.trim());
+    $("#goHint").textContent = all ? "" : "請先確認上方所有要點"; // 要點被取消勾選時才會出現
   };
   checks.forEach(c => c.onchange = refresh); nm.oninput = refresh;
   nm.onkeydown = e => { if (e.key === "Enter" && !go.disabled) go.click(); };
-  // 填答範例：可以實際點點看（只是示範，不會記錄）
-  const ex = { most: exOpts.length > 1 ? 1 : null, least: exOpts.length > 2 ? 2 : null };
-  const drawEx = () => {
-    $$(".imm-ex .opt").forEach((row, i) => { row.classList.toggle("has-most", ex.most === i); row.classList.toggle("has-least", ex.least === i);
-      $(".most", row).classList.toggle("on", ex.most === i); $(".least", row).classList.toggle("on", ex.least === i);
-      $(".most", row).disabled = ex.least === i; $(".least", row).disabled = ex.most === i; });
-    const st = $("#exStatus"); if (!st) return;
-    st.className = "imm-ex-status" + (ex.most !== null && ex.least !== null ? " ok" : "");
-    st.textContent = ex.most !== null && ex.least !== null ? "✓ 各選一個「最像我」與「最不像我」，這一題就完成了" : `還差一步：請再選出${ex.most === null ? "「最像我」" : "「最不像我」"}`;
-  };
-  $$(".imm-ex .mark").forEach(b => b.onclick = () => { const k = b.dataset.k, i = +b.dataset.i; ex[k] = ex[k] === i ? null : i; drawEx(); });
-  drawEx(); refresh();
+  refresh();
   go.onclick = () => { store.set("disc_name", nm.value.trim()); selfStart(I, nm.value.trim()); };
 }
-/* 準備儀式（約 4 秒，可略過）：同時在背景載入題目 */
+/* 開始作答：載入題目後直接進入第 1 題 */
 async function selfStart(I, name) {
-  const loading = select("questions", "kind=eq.self&order=sort.asc,updated_at.asc").catch(e => e);
-  await selfReady();
-  const rows = await loading;
-  if (!Array.isArray(rows) || rows.length < 3) { toast(Array.isArray(rows) ? "題目數量不足，請聯絡講師" : "載入失敗：" + rows.message); return selfIntro(); }
+  const go = $("#go"); if (go) { go.disabled = true; go.textContent = "載入題目…"; }
+  const rows = await select("questions", "kind=eq.self&order=sort.asc,updated_at.asc").catch(e => e);
+  if (!Array.isArray(rows) || rows.length < 3) { toast(Array.isArray(rows) ? "題目數量不足，請聯絡講師" : "載入失敗：" + rows.message); if (go) { go.disabled = false; go.textContent = I.startBtn; } return; }
   selfQs = rows;
   const qs = (cfg.randomize ? shuffle(selfQs) : selfQs).map(q => ({ ...q, options: shuffle(q.options) }));
   selfRun = { name, qs, cur: 0, ans: {} };
   selfQuestion(true);
-}
-function selfReady() {
-  return new Promise(resolve => {
-    setImm(true);
-    app.innerHTML = `<div class="imm-ready">${orbHtml("orb-big breathe")}
-      <p class="imm-line l1">深呼吸，放鬆一下</p><p class="imm-line l2">想著「平常工作中，最自然的你」</p><p class="imm-line l3">不用多想，依第一直覺作答</p>
-      <button type="button" class="ghost sm imm-skip" id="skip">略過</button></div>`;
-    const done = () => { clearTimeout(t); resolve(); }, t = setTimeout(done, reduceMotion() ? 1200 : 4200);
-    $("#skip").onclick = done;
-  });
 }
 function selfQuestion(fresh) {
   setImm(true);
