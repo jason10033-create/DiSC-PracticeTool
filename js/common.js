@@ -891,7 +891,7 @@ const homeScale = (H, k) => Math.min(HOME_SIZE_RANGE[1], Math.max(HOME_SIZE_RANG
 /* 四大功能色塊右下角的線條圖示（淡淡的、與色塊同色；形狀對應功能名稱前面的小圖示：書本／鏡子／放大鏡／指南針）*/
 const HOME_ICONS = {
   tools: `<svg class="bgicon" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 15C26 11 16 10.500 8 13.500V50C16 47 26 47.500 32 51.500C38 47.500 48 47 56 50V13.500C48 10.500 38 11 32 15Z" class="ac"/><path d="M32 15V51.500M14 23H26M14 31H26M38 23H50M38 31H50"/></svg>`,
-  self: `<svg class="bgicon" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="25" r="17" class="ac"/><path d="M32 42V57M25 57H39M22 19A11 11 0 0 1 30 13"/></svg>`,
+  self: `<svg class="bgicon" viewBox="0 0 64 64" aria-hidden="true"><ellipse cx="32" cy="25" rx="17" ry="21" class="ac"/><ellipse cx="32" cy="25" rx="12" ry="16"/><path d="M26 20L33 12M25 29L37 15M32 46V52M22 60L32 52L42 60"/></svg>`,
   others: `<svg class="bgicon" viewBox="0 0 64 64" aria-hidden="true"><circle cx="27" cy="27" r="17" class="ac"/><path d="M39.500 39.500L56 56M18 23A10 10 0 0 1 25 17"/></svg>`,
   adapt: `<svg class="bgicon" viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r="25"/><path d="M32 15L39 32L32 49L25 32Z" class="ac"/><path d="M32 7V11M32 53V57M7 32H11M53 32H57"/></svg>`
 };
@@ -904,6 +904,6 @@ function homeHtml(H, locked) {
     const F = H.features[f.id], lk = locked ? locked(f.id) : false;
     return `<button class="feature t-${f.t} ${lk ? "locked" : ""}${fill >= 70 ? " solid" : ""}" data-f="${f.id}">
       ${HOME_ICONS[f.id]}<span class="lock">${lk ? "🔒" : ""}</span><div class="no">${esc(H.stepLabel)} ${f.no}</div>
-      <h3>${f.icon} ${esc(F.name)}</h3><p class="muted" style="margin:0">${esc(F.desc)}</p></button>`;
+      <h3>${esc(F.name)}</h3><p class="muted" style="margin:0">${esc(F.desc)}</p></button>`;
   }).join("")}</div>`;
 }
