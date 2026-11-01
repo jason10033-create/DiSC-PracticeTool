@@ -312,10 +312,8 @@ body.imm::before { content:""; position:fixed; inset:0; z-index:-1; pointer-even
   background:
     radial-gradient(38% 38% at 16% 20%, color-mix(in srgb, var(--D) 30%, transparent), transparent 70%),
     radial-gradient(36% 36% at 84% 16%, color-mix(in srgb, var(--I) 32%, transparent), transparent 70%),
-    radial-gradient(40% 40% at 86% 84%, color-mix(in srgb, var(--S) 28%, transparent), transparent 70%),
-    radial-gradient(38% 38% at 14% 86%, color-mix(in srgb, var(--C) 30%, transparent), transparent 70%); }
-@media (prefers-reduced-motion:no-preference) { body.imm::before { animation:ambDrift 26s ease-in-out infinite alternate; } }
-@keyframes ambDrift { from { transform:translate3d(0,0,0) scale(1) rotate(0deg); } to { transform:translate3d(2.5%,-2%,0) scale(1.1) rotate(7deg); } }
+    radial-gradient(40% 40% at 86% 84%, color-mix(in srgb, var(--C) 28%, transparent), transparent 70%),
+    radial-gradient(38% 38% at 14% 86%, color-mix(in srgb, var(--S) 30%, transparent), transparent 70%); }
 
 .imm-wrap, .imm-q, .imm-ready { max-width:720px; margin:0 auto; }
 .imm-back, .imm-exit { display:inline-block; font-size:14px; text-decoration:none; color:var(--muted); padding:6px 4px; }
@@ -515,9 +513,8 @@ body.ambient::before { content:""; position:fixed; inset:0; z-index:-1; pointer-
   background:
     radial-gradient(38% 38% at 16% 20%, color-mix(in srgb, var(--D) 26%, transparent), transparent 70%),
     radial-gradient(36% 36% at 84% 16%, color-mix(in srgb, var(--I) 28%, transparent), transparent 70%),
-    radial-gradient(40% 40% at 86% 84%, color-mix(in srgb, var(--S) 24%, transparent), transparent 70%),
-    radial-gradient(38% 38% at 14% 86%, color-mix(in srgb, var(--C) 26%, transparent), transparent 70%); }
-@media (prefers-reduced-motion:no-preference) { body.ambient::before { animation:ambDrift 26s ease-in-out infinite alternate; } }
+    radial-gradient(40% 40% at 86% 84%, color-mix(in srgb, var(--C) 24%, transparent), transparent 70%),
+    radial-gradient(38% 38% at 14% 86%, color-mix(in srgb, var(--S) 26%, transparent), transparent 70%); }
 .hero { background:none; color:var(--text); border-radius:0; overflow:visible; padding:30px 6px 10px; }
 .hero::after { display:none; }
 .hero h1 { color:var(--text); margin-bottom:10px; }
