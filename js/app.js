@@ -80,15 +80,7 @@ function askUnlock(f) {
 
 /* ---------- 首頁 ---------- */
 function home() {
-  app.innerHTML = `
-  <section class="hero"><h1>${esc(HOME.heroTitle)}</h1>
-    <p>${esc(HOME.heroText)}</p></section>
-  <div class="grid c2" style="margin-top:20px">${FEATURES.map(f => {
-    const locked = !isUnlocked(f.id);
-    return `<button class="feature t-${f.t} ${locked ? "locked" : ""}" data-f="${f.id}">
-      <span class="lock">${locked ? "🔒" : ""}</span><div class="no">${esc(HOME.stepLabel)} ${f.no}</div>
-      <h3>${f.icon} ${esc(f.name)}</h3><p class="muted" style="margin:0">${esc(f.desc)}</p></button>`;
-  }).join("")}</div>`;
+  app.innerHTML = homeHtml(HOME, id => !isUnlocked(id)); // 版面與文字大小由 common.js 的 homeHtml 產生（後台「首頁內容」預覽共用）
   $$(".feature").forEach(b => b.onclick = () => {
     const f = FEATURES.find(x => x.id === b.dataset.f);
     if (!isUnlocked(f.id)) askUnlock(f); else location.hash = "#/" + f.id;

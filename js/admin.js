@@ -80,18 +80,22 @@ async function vHome() {
   const rows = await select("site_content", "key=eq.home&select=key,data");
   const custom = rows.length > 0, H = getHome(Object.fromEntries(rows.map(r => [r.key, r.data]))), c = H.copyright, h = H.copyrightHome;
   const F = { tools: ["01", "t-D"], self: ["02", "t-I"], others: ["03", "t-S"], adapt: ["04", "t-C"] };
-  $("#view").innerHTML = `<div class="card"><div class="row between"><h2>🏠 前台首頁內容 ${custom ? `<span class="pill" style="background:var(--brand)">已自訂</span>` : `<span class="small muted">（預設）</span>`}</h2>
+  const sizeCtl = (k, label) => `<div class="sizectl"><span class="small">${label}</span><input type="range" min="${HOME_SIZE_RANGE[0]}" max="${HOME_SIZE_RANGE[1]}" step="5" value="${H.sizes[k]}" data-sz="${k}" aria-label="${label}"><b data-szv="${k}">${H.sizes[k]}%</b><button type="button" class="ghost sm" data-szreset="${k}">預設</button></div>`;
+  $("#view").innerHTML = `<div class="card"><div class="row between"><h2>預覽</h2><span class="small muted">即時顯示你目前輸入的文字與大小（尚未儲存）</span></div>
+    <div class="home-preview" id="homePreview" aria-label="首頁預覽"></div></div>
+  <div class="card" style="margin-top:16px"><div class="row between"><h2>🏠 前台首頁內容 ${custom ? `<span class="pill" style="background:var(--brand)">已自訂</span>` : `<span class="small muted">（預設）</span>`}</h2>
     <a class="btn ghost sm" href="index.html" target="_blank" rel="noopener">開啟前台預覽 ↗</a></div>
     <p class="muted">編輯學員首頁看到的所有文字。儲存後重新整理前台即可生效。</p>
     <h3>網站與主視覺</h3>
     <label class="f">網站名稱（左上角與瀏覽器分頁標題）</label><input type="text" data-k="siteName" value="${esc(H.siteName)}">
-    <label class="f">主視覺標題</label><input type="text" data-k="heroTitle" value="${esc(H.heroTitle)}">
-    <label class="f">主視覺說明文字</label><textarea data-k="heroText">${esc(H.heroText)}</textarea>
+    <label class="f">主視覺標題</label><input type="text" data-k="heroTitle" value="${esc(H.heroTitle)}">${sizeCtl("heroTitle", "標題大小")}
+    <label class="f">主視覺說明文字</label><textarea data-k="heroText">${esc(H.heroText)}</textarea>${sizeCtl("heroText", "說明文字大小")}
     <h3 style="margin-top:20px">四大功能卡片</h3>
     <label class="f">卡片小標前綴（例如 STEP）</label><input type="text" data-k="stepLabel" value="${esc(H.stepLabel)}" style="max-width:200px">
     <div class="grid c2">${Object.keys(F).map(k => `<div class="box ${F[k][1]}"><b>${F[k][0]}</b>
       <label class="f">名稱</label><input type="text" data-fk="${k}" data-f="name" value="${esc(H.features[k].name)}">
       <label class="f">說明</label><textarea data-fk="${k}" data-f="desc" style="min-height:64px">${esc(H.features[k].desc)}</textarea></div>`).join("")}</div>
+    ${sizeCtl("featName", "卡片名稱大小（四張卡片一起）")}${sizeCtl("featDesc", "卡片說明大小（四張卡片一起）")}
     <h3 style="margin-top:20px">其他文字</h3>
     <label class="f">解鎖視窗提示文字</label><input type="text" data-k="lockTitleHint" value="${esc(H.lockTitleHint)}">
     <label class="f">頁尾「管理後台」連結文字</label><input type="text" data-k="adminLinkText" value="${esc(H.adminLinkText)}" style="max-width:260px">
@@ -106,10 +110,19 @@ async function vHome() {
       <label class="f">標題（可留空）</label><input type="text" id="cpTitle" value="${esc(c.title)}">
       <label class="f">內容（支援 **粗體**、- 清單、[文字](網址)）</label><textarea id="cpText" style="min-height:90px">${esc(c.text)}</textarea></div>
     <div class="row" style="margin-top:16px"><button id="save">💾 儲存首頁內容</button><button class="ghost" id="reset" ${custom ? "" : "disabled"}>還原預設</button></div></div>`;
+  // 即時預覽：把目前表單內容（文字＋大小）用前台同一個版面畫出來
+  const sizesNow = () => { const s = {}; $$("[data-sz]").forEach(i => s[i.dataset.sz] = +i.value); return s; };
+  const draftH = () => { const features = {}; Object.keys(F).forEach(k => features[k] = { name: $(`[data-fk="${k}"][data-f="name"]`).value, desc: $(`[data-fk="${k}"][data-f="desc"]`).value });
+    return { ...H, heroTitle: $(`[data-k="heroTitle"]`).value, heroText: $(`[data-k="heroText"]`).value, stepLabel: $(`[data-k="stepLabel"]`).value, features, sizes: sizesNow() }; };
+  const drawPreview = () => { $("#homePreview").innerHTML = homeHtml(draftH()); };
+  $$("[data-k], [data-fk]").forEach(el => el.oninput = drawPreview);
+  $$("[data-sz]").forEach(el => el.oninput = () => { $(`[data-szv="${el.dataset.sz}"]`).textContent = el.value + "%"; drawPreview(); });
+  $$("[data-szreset]").forEach(b => b.onclick = () => { const r = $(`[data-sz="${b.dataset.szreset}"]`); r.value = 100; r.oninput(); });
+  drawPreview();
   $("#save").onclick = e => busy(e.target, async () => {
     const g = k => $(`[data-k="${k}"]`).value.trim(), features = {};
     Object.keys(F).forEach(k => features[k] = { name: $(`[data-fk="${k}"][data-f="name"]`).value.trim(), desc: $(`[data-fk="${k}"][data-f="desc"]`).value.trim() });
-    const data = { siteName: g("siteName"), heroTitle: g("heroTitle"), heroText: g("heroText"), stepLabel: g("stepLabel"), lockTitleHint: g("lockTitleHint"), adminLinkText: g("adminLinkText"), features,
+    const data = { siteName: g("siteName"), heroTitle: g("heroTitle"), heroText: g("heroText"), stepLabel: g("stepLabel"), lockTitleHint: g("lockTitleHint"), adminLinkText: g("adminLinkText"), features, sizes: sizesNow(),
       copyright: { enabled: $("#cpOn").checked, title: $("#cpTitle").value.trim(), text: $("#cpText").value.trim() },
       copyrightHome: { enabled: $("#cpHomeOn").checked, title: $("#cpHomeTitle").value.trim(), text: $("#cpHomeText").value.trim() } };
     if (!data.siteName || !data.heroTitle) return toast("網站名稱與主視覺標題不可空白");

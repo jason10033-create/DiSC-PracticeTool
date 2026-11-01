@@ -597,6 +597,7 @@ const DEFAULT_HOME = {
   heroTitle: "看懂自己，也看懂別人",
   heroText: "DiSC 人際風格工作坊的學習夥伴：課前完成自我測評，課後隨時查閱教材、識別他人，並用更聰明的方式溝通。",
   stepLabel: "STEP",
+  sizes: { heroTitle: 100, heroText: 100, featName: 100, featDesc: 100 }, // 文字大小（％，100＝預設），後台「首頁內容」可調整
   features: {
     tools: { name: "解密工具", desc: "掌握 DiSC 的原理與應用：教材、圖文、影音一次看。" },
     self: { name: "看懂自己", desc: "15 題自我測評，發現「原來我在別人眼中是這樣！」" },
@@ -613,7 +614,7 @@ function getHome(map) {
   const d = DEFAULT_HOME, h = (map && map["home"]) || {};
   const features = {};
   Object.keys(d.features).forEach(k => features[k] = { ...d.features[k], ...((h.features || {})[k] || {}) });
-  return { ...d, ...h, features, copyright: { ...d.copyright, ...(h.copyright || {}) }, copyrightHome: { ...d.copyrightHome, ...(h.copyrightHome || {}) } };
+  return { ...d, ...h, features, sizes: { ...d.sizes, ...(h.sizes || {}) }, copyright: { ...d.copyright, ...(h.copyright || {}) }, copyrightHome: { ...d.copyrightHome, ...(h.copyrightHome || {}) } };
 }
 
 /* ============ 測評開頭文字（後台「開頭文字」可覆寫；key: intro_self / intro_others）============ */
@@ -877,4 +878,24 @@ function othersResultHtml(cnt, ovrMap, note) {
     ${n < 6 ? `<p class="notice small">作答題數較少，結果僅供參考。</p>` : ""}
     ${(note || "").trim() ? `<div class="callout info" style="margin-top:16px">${md(note.trim())}</div>` : ""}`;
   return { html, base, model: m, n, cands, multi };
+}
+
+/* ============ 首頁主視覺與四大功能（前台首頁與後台「首頁內容」預覽共用）============
+   H＝getHome() 的結果；文字大小用 H.sizes（％，100＝預設）換算成倍率，再用 CSS 變數套用到預設字級上（保留手機版的自動縮放）。 */
+const HOME_FEATURES = [
+  { id: "tools", no: "01", t: "D", icon: "📖" }, { id: "self", no: "02", t: "I", icon: "🪞" },
+  { id: "others", no: "03", t: "S", icon: "🔍" }, { id: "adapt", no: "04", t: "C", icon: "🧭" }
+];
+const HOME_SIZE_RANGE = [50, 200];
+const homeScale = (H, k) => Math.min(HOME_SIZE_RANGE[1], Math.max(HOME_SIZE_RANGE[0], +((H.sizes || {})[k]) || 100)) / 100;
+function homeHtml(H, locked) {
+  const sc = k => homeScale(H, k);
+  return `<section class="hero" style="--hs-title:${sc("heroTitle")};--hs-text:${sc("heroText")}"><h1>${esc(H.heroTitle)}</h1>
+    <p>${esc(H.heroText)}</p></section>
+  <div class="grid c2" style="margin-top:20px;--hs-fname:${sc("featName")};--hs-fdesc:${sc("featDesc")}">${HOME_FEATURES.map(f => {
+    const F = H.features[f.id], lk = locked ? locked(f.id) : false;
+    return `<button class="feature t-${f.t} ${lk ? "locked" : ""}" data-f="${f.id}">
+      <span class="lock">${lk ? "🔒" : ""}</span><div class="no">${esc(H.stepLabel)} ${f.no}</div>
+      <h3>${f.icon} ${esc(F.name)}</h3><p class="muted" style="margin:0">${esc(F.desc)}</p></button>`;
+  }).join("")}</div>`;
 }

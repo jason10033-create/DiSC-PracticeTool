@@ -473,3 +473,16 @@ body.imm .wrap { padding-bottom:12px; }
   .imm-opts .imm-opt .lbl { font-size:clamp(13px,2.1vh,15px); line-height:1.35; }
   .imm-opts .imm-opt .mark { padding:6px 9px; font-size:12px; border-width:1.5px; }
 }
+
+/* 首頁文字大小：後台「首頁內容」可調整（倍率由 homeHtml 以 CSS 變數帶入；沒設定時為 1）*/
+.hero h1 { font-size:calc(clamp(26px,5vw,38px) * var(--hs-title,1)); }
+.hero p { font-size:calc(1rem * var(--hs-text,1)); }
+.feature h3 { font-size:calc(20px * var(--hs-fname,1)); }
+.feature p { font-size:calc(1rem * var(--hs-fdesc,1)); }
+/* 後台「首頁內容」：文字大小滑桿與即時預覽 */
+.sizectl { display:flex; align-items:center; gap:10px; margin:8px 0 2px; flex-wrap:wrap; }
+.sizectl > .small { min-width:150px; font-weight:700; }
+.sizectl input[type=range] { flex:1 1 160px; max-width:320px; }
+.sizectl b { min-width:48px; text-align:right; }
+.home-preview { margin-top:10px; padding:16px; border:1px solid var(--line); border-radius:18px; background:var(--bg); }
+.home-preview .feature { pointer-events:none; }
