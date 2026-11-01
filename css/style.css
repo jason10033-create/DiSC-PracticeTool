@@ -492,7 +492,7 @@ body.imm .wrap { padding-bottom:12px; }
   background:color-mix(in srgb, var(--c) var(--bo,22%), transparent); box-shadow:0 8px 24px color-mix(in srgb, var(--c) 16%, transparent);
   overflow:hidden; transition:transform .2s ease, box-shadow .2s ease, background .2s ease; }
 .feature::after { content:attr(data-no); position:absolute; right:16px; bottom:-18px; font-size:104px; font-weight:900; line-height:1; letter-spacing:-.04em; color:var(--c); opacity:.2; pointer-events:none; }
-.feature .no { color:var(--c); font-size:13px; }
+.feature .no { color:color-mix(in srgb, var(--c) 72%, var(--text)); font-size:13px; }
 .feature h3 { margin:6px 0 6px; }
 .feature p, .feature p.muted { color:var(--text); opacity:.82; max-width:92%; }
 .feature:hover { transform:translateY(-4px); background:color-mix(in srgb, var(--c) calc(var(--bo,22%) + 10%), transparent); box-shadow:0 14px 32px color-mix(in srgb, var(--c) 26%, transparent); }
