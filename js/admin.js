@@ -80,7 +80,7 @@ async function vHome() {
   const rows = await select("site_content", "key=eq.home&select=key,data");
   const custom = rows.length > 0, H = getHome(Object.fromEntries(rows.map(r => [r.key, r.data]))), c = H.copyright, h = H.copyrightHome;
   const F = { tools: ["01", "t-D"], self: ["02", "t-I"], others: ["03", "t-S"], adapt: ["04", "t-C"] };
-  const sizeCtl = (k, label) => `<div class="sizectl"><span class="small">${label}</span><input type="range" min="${HOME_SIZE_RANGE[0]}" max="${HOME_SIZE_RANGE[1]}" step="5" value="${H.sizes[k]}" data-sz="${k}" aria-label="${label}"><b data-szv="${k}">${H.sizes[k]}%</b><button type="button" class="ghost sm" data-szreset="${k}">預設</button></div>`;
+  const sizeCtl = (k, label, def = 100, min = HOME_SIZE_RANGE[0], max = HOME_SIZE_RANGE[1], step = 5) => `<div class="sizectl"><span class="small">${label}</span><input type="range" min="${min}" max="${max}" step="${step}" value="${H.sizes[k]}" data-sz="${k}" data-szdef="${def}" aria-label="${label}"><b data-szv="${k}">${H.sizes[k]}%</b><button type="button" class="ghost sm" data-szreset="${k}">預設</button></div>`;
   $("#view").innerHTML = `<div class="card"><div class="row between"><h2>預覽</h2><span class="small muted">即時顯示你目前輸入的文字與大小（尚未儲存）</span></div>
     <div class="home-preview" id="homePreview" aria-label="首頁預覽"></div></div>
   <div class="card" style="margin-top:16px"><div class="row between"><h2>🏠 前台首頁內容 ${custom ? `<span class="pill" style="background:var(--brand)">已自訂</span>` : `<span class="small muted">（預設）</span>`}</h2>
@@ -96,6 +96,7 @@ async function vHome() {
       <label class="f">名稱</label><input type="text" data-fk="${k}" data-f="name" value="${esc(H.features[k].name)}">
       <label class="f">說明</label><textarea data-fk="${k}" data-f="desc" style="min-height:64px">${esc(H.features[k].desc)}</textarea></div>`).join("")}</div>
     ${sizeCtl("featName", "卡片名稱大小（四張卡片一起）")}${sizeCtl("featDesc", "卡片說明大小（四張卡片一起）")}
+    ${sizeCtl("blockT", "卡片色塊透明度（數字越大越透明，0% ＝ 完全塗滿）", 78, 0, 95, 1)}
     <h3 style="margin-top:20px">其他文字</h3>
     <label class="f">解鎖視窗提示文字</label><input type="text" data-k="lockTitleHint" value="${esc(H.lockTitleHint)}">
     <label class="f">頁尾「管理後台」連結文字</label><input type="text" data-k="adminLinkText" value="${esc(H.adminLinkText)}" style="max-width:260px">
@@ -117,7 +118,7 @@ async function vHome() {
   const drawPreview = () => { $("#homePreview").innerHTML = homeHtml(draftH()); };
   $$("[data-k], [data-fk]").forEach(el => el.oninput = drawPreview);
   $$("[data-sz]").forEach(el => el.oninput = () => { $(`[data-szv="${el.dataset.sz}"]`).textContent = el.value + "%"; drawPreview(); });
-  $$("[data-szreset]").forEach(b => b.onclick = () => { const r = $(`[data-sz="${b.dataset.szreset}"]`); r.value = 100; r.oninput(); });
+  $$("[data-szreset]").forEach(b => b.onclick = () => { const r = $(`[data-sz="${b.dataset.szreset}"]`); r.value = r.dataset.szdef; r.oninput(); });
   drawPreview();
   $("#save").onclick = e => busy(e.target, async () => {
     const g = k => $(`[data-k="${k}"]`).value.trim(), features = {};

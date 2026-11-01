@@ -597,7 +597,7 @@ const DEFAULT_HOME = {
   heroTitle: "看懂自己，也看懂別人",
   heroText: "DiSC 人際風格工作坊的學習夥伴：課前完成自我測評，課後隨時查閱教材、識別他人，並用更聰明的方式溝通。",
   stepLabel: "STEP",
-  sizes: { heroTitle: 100, heroText: 100, featName: 100, featDesc: 100 }, // 文字大小（％，100＝預設），後台「首頁內容」可調整
+  sizes: { heroTitle: 100, heroText: 100, featName: 100, featDesc: 100, blockT: 78 }, // 文字大小（％，100＝預設），後台「首頁內容」可調整
   features: {
     tools: { name: "解密工具", desc: "掌握 DiSC 的原理與應用：教材、圖文、影音一次看。" },
     self: { name: "看懂自己", desc: "15 題自我測評，發現「原來我在別人眼中是這樣！」" },
@@ -890,11 +890,12 @@ const HOME_SIZE_RANGE = [50, 200];
 const homeScale = (H, k) => Math.min(HOME_SIZE_RANGE[1], Math.max(HOME_SIZE_RANGE[0], +((H.sizes || {})[k]) || 100)) / 100;
 function homeHtml(H, locked) {
   const sc = k => homeScale(H, k);
+  const bt = (() => { const v = (H.sizes || {}).blockT; return v == null || isNaN(+v) ? 78 : Math.min(95, Math.max(0, +v)); })(), fill = 100 - bt; // 色塊透明度 → 顏色濃度（％）
   return `<section class="hero" style="--hs-title:${sc("heroTitle")};--hs-text:${sc("heroText")}"><h1>${esc(H.heroTitle)}</h1>
     <p>${esc(H.heroText)}</p></section>
-  <div class="grid c2" style="margin-top:20px;--hs-fname:${sc("featName")};--hs-fdesc:${sc("featDesc")}">${HOME_FEATURES.map(f => {
+  <div class="grid c2" style="margin-top:20px;--hs-fname:${sc("featName")};--hs-fdesc:${sc("featDesc")};--bo:${fill}%">${HOME_FEATURES.map(f => {
     const F = H.features[f.id], lk = locked ? locked(f.id) : false;
-    return `<button class="feature t-${f.t} ${lk ? "locked" : ""}" data-f="${f.id}" data-no="${f.no}">
+    return `<button class="feature t-${f.t} ${lk ? "locked" : ""}${fill >= 70 ? " solid" : ""}" data-f="${f.id}" data-no="${f.no}">
       <span class="lock">${lk ? "🔒" : ""}</span><div class="no">${esc(H.stepLabel)} ${f.no}</div>
       <h3>${f.icon} ${esc(F.name)}</h3><p class="muted" style="margin:0">${esc(F.desc)}</p></button>`;
   }).join("")}</div>`;
