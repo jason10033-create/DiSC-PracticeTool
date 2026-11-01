@@ -894,7 +894,7 @@ function homeHtml(H, locked) {
     <p>${esc(H.heroText)}</p></section>
   <div class="grid c2" style="margin-top:20px;--hs-fname:${sc("featName")};--hs-fdesc:${sc("featDesc")}">${HOME_FEATURES.map(f => {
     const F = H.features[f.id], lk = locked ? locked(f.id) : false;
-    return `<button class="feature t-${f.t} ${lk ? "locked" : ""}" data-f="${f.id}">
+    return `<button class="feature t-${f.t} ${lk ? "locked" : ""}" data-f="${f.id}" data-no="${f.no}">
       <span class="lock">${lk ? "🔒" : ""}</span><div class="no">${esc(H.stepLabel)} ${f.no}</div>
       <h3>${f.icon} ${esc(F.name)}</h3><p class="muted" style="margin:0">${esc(F.desc)}</p></button>`;
   }).join("")}</div>`;

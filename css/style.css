@@ -486,3 +486,18 @@ body.imm .wrap { padding-bottom:12px; }
 .sizectl b { min-width:48px; text-align:right; }
 .home-preview { margin-top:10px; padding:16px; border:1px solid var(--line); border-radius:18px; background:var(--bg); }
 .home-preview .feature { pointer-events:none; }
+
+/* ===== 首頁四大功能：色塊版（預覽中）===== */
+.feature { border:0; border-radius:24px; padding:24px 24px 22px; min-height:156px; color:var(--on,#fff);
+  background:color-mix(in srgb, var(--c) 88%, #000); box-shadow:0 10px 26px color-mix(in srgb, var(--c) 34%, transparent);
+  overflow:hidden; transition:transform .2s ease, box-shadow .2s ease; }
+.feature.t-I { --on:#2b2108; background:var(--c); }
+.feature::after { content:attr(data-no); position:absolute; right:16px; bottom:-18px; font-size:104px; font-weight:900; line-height:1; letter-spacing:-.04em; opacity:.16; pointer-events:none; }
+.feature .no { color:inherit; opacity:.82; font-size:13px; }
+.feature h3 { color:inherit; margin:6px 0 6px; }
+.feature p, .feature p.muted { color:inherit; opacity:.93; max-width:92%; }
+.feature:hover { transform:translateY(-4px); box-shadow:0 16px 34px color-mix(in srgb, var(--c) 46%, transparent); }
+.feature:focus-visible { outline:3px solid var(--brand); outline-offset:3px; }
+.feature.locked { opacity:.92; }
+.feature .lock { opacity:.95; }
+@media (prefers-reduced-motion:reduce) { .feature { transition:none; } .feature:hover { transform:none; } }
