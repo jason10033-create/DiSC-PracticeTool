@@ -654,9 +654,12 @@ const getIntro = (map, kind) => ({ ...DEFAULT_INTRO[kind], ...((map && map["intr
 const RATE_LABELS = { 1: "非常不準確", 2: "不太準確", 3: "不確定", 4: "大多準確", 5: "非常準確" };
 
 /* 「看懂自己」結果頁設定（後台「看懂自己 → 題目與設定」可調整；key: self_result）
-   feedbackEnabled＝是否顯示「評估結果的準確度回饋」；highlight＝回饋下方的重點提示文字（留空＝不顯示） */
+   feedbackEnabled＝是否顯示「評估結果的準確度回饋」；highlight＝回饋下方的重點提示文字（留空＝不顯示）；
+   highlightEnabled＝是否顯示這段文字；highlightSize＝文字大小（％，100＝預設 15px） */
 const DEFAULT_SELF_RESULT = {
   feedbackEnabled: true,
+  highlightEnabled: true,
+  highlightSize: 100,
   highlight: "**看懂自己只是第一步，參加工作坊和大家一起共學掌握完整的 DiSC 工具！**"
 };
 const getSelfResult = map => ({ ...DEFAULT_SELF_RESULT, ...((map && map["self_result"]) || {}) });

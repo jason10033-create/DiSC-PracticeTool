@@ -352,7 +352,7 @@ async function selfResult(r, saved, demo, reveal) {
     ${html}
     <p class="muted small" style="margin-top:14px">最後測評時間：${new Date(r.updated_at).toLocaleString("zh-TW")}。DiSC 描述的是行為傾向，會隨情境變化，結果僅供參考。</p>
     ${sr.feedbackEnabled && !demo ? feedbackBlock(r) : ""}
-    ${hl ? `<div class="hl-note">${md(hl)}</div>` : ""}
+    ${hl && sr.highlightEnabled !== false ? `<div class="hl-note" style="--hl-size:${Math.min(250, Math.max(50, +sr.highlightSize || 100)) / 100}">${md(hl)}</div>` : ""}
     <div class="row between" style="margin-top:16px"><button class="ghost" id="redo">重新測驗</button>
       <span class="row">${MASCOT_ON ? `<button class="soft" id="dlCard">🖼 下載結果小卡</button>` : ""}<a class="btn" href="#/adapt">前往彈性調適 →</a></span></div></div></div>`;
   $("#redo").onclick = () => { if (confirm("重新測驗會覆蓋原本的紀錄，確定嗎？")) selfIntro(); };

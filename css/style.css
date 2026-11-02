@@ -143,9 +143,9 @@ input[type=range]::-moz-range-thumb { width:26px; height:26px; border-radius:50%
 /* 結果頁的準確度回饋：寬度與整體版面相同；高度與字級維持精簡 */
 .rate-box { width:100%; margin:18px 0 0; padding:8px 14px; background:var(--surface2); border-radius:12px; line-height:1.35; }
 /* 回饋下方的重點提示（文字可在後台編輯） */
-.hl-note { margin-top:12px; padding:12px 16px; border-radius:12px; background:var(--I-soft); border-left:5px solid var(--I); font-size:15px; }
+.hl-note { margin-top:14px; font-size:calc(15px * var(--hl-size,1)); line-height:1.6; }  /* 純文字，不加底色、框線與螢光筆；大小由後台「結果頁設定」調整 */
 .hl-note p { margin:0; }
-.hl-note b { font-weight:800; background:linear-gradient(transparent 58%, color-mix(in srgb, var(--I) 45%, transparent) 58%); }
+.hl-note b { font-weight:800; }
 .rate-box h3 { margin:0 0 6px; font-size:14px; }
 .rate-box .rate-current { font-size:16px; margin-bottom:2px; }
 .rate-box input[type=range]::-webkit-slider-thumb { width:20px; height:20px; border-width:3px; }

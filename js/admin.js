@@ -301,8 +301,12 @@ async function vQuestions(kind) {
     <p><button id="saveCfg">儲存設定</button></p></div>
   <div class="card" style="margin-top:16px"><h2>結果頁設定</h2>
     <label class="switch"><input type="checkbox" id="srFeedback" ${sr.feedbackEnabled ? "checked" : ""}> 顯示「評估結果的準確度回饋」（1–5 分滑桿；取消勾選＝學員結果頁不出現這個功能）</label>
-    <label class="f">回饋下方的重點提示文字（支援 **粗體**，會以醒目的重點樣式顯示；留空＝不顯示）</label>
+    <label class="switch" style="margin-top:10px"><input type="checkbox" id="srHlOn" ${sr.highlightEnabled !== false ? "checked" : ""}> 顯示回饋下方的提示文字（取消勾選＝整段文字不出現）</label>
+    <label class="f">提示文字（支援 **粗體**；留空＝不顯示）</label>
     <textarea id="srHighlight" style="min-height:76px">${esc(sr.highlight)}</textarea>
+    <div class="sizectl"><span class="small">文字大小</span><input type="range" min="50" max="250" step="5" id="srHlSize" value="${Math.min(250, Math.max(50, +sr.highlightSize || 100))}" aria-label="提示文字大小"><b id="srHlSizeV">${Math.min(250, Math.max(50, +sr.highlightSize || 100))}%</b><button type="button" class="ghost sm" id="srHlSizeReset">預設</button></div>
+    <p class="small muted" style="margin:10px 0 4px">預覽（學員結果頁看到的樣子）：</p>
+    <div class="home-preview"><div class="hl-note" id="srHlPrev"></div></div>
     <p><button id="saveSr">儲存結果頁設定</button></p></div>` : ""}
   <div class="card" style="margin-top:16px"><div class="row between"><h2>${isSelf ? "🪞 看懂自己：題目" : "🔍 識別他人：題目"}（共 ${qs.length} 題）</h2><button id="addQ">＋ 新增題目</button></div>
     <p class="muted">${isSelf ? "每題四個行為描述，各自對應一種風格；填答者選出「最像」與「最不像」。" : "每題四個行為線索，各自對應一種風格；填答者選出最符合該人的一項。"}修改後請按該題的「儲存」。</p>
@@ -310,8 +314,17 @@ async function vQuestions(kind) {
   if (isSelf) $("#saveCfg").onclick = e => busy(e.target, async () => {
     await A("admin_update_config", { patch: { randomize: $("#cRand").checked, show_results: $("#cShow").checked, secondary_gap: +$("#cGap").value || 0 } }); toast("已儲存設定");
   });
+  if (isSelf) {
+    // 提示文字的即時預覽（文字、大小、是否顯示）
+    const drawHl = () => { const p = $("#srHlPrev"), size = +$("#srHlSize").value, t = $("#srHighlight").value.trim(), on = $("#srHlOn").checked;
+      $("#srHlSizeV").textContent = size + "%"; p.style.setProperty("--hl-size", size / 100);
+      p.innerHTML = !on ? `<span class="muted small">（已設定為不顯示）</span>` : t ? md(t) : `<span class="muted small">（沒有文字，不會顯示）</span>`; };
+    $("#srHighlight").oninput = $("#srHlSize").oninput = $("#srHlOn").onchange = drawHl;
+    $("#srHlSizeReset").onclick = () => { $("#srHlSize").value = 100; drawHl(); };
+    drawHl();
+  }
   if (isSelf) $("#saveSr").onclick = e => busy(e.target, async () => {
-    await A("admin_upsert_site", { p_key: "self_result", p_data: { feedbackEnabled: $("#srFeedback").checked, highlight: $("#srHighlight").value.trim() } });
+    await A("admin_upsert_site", { p_key: "self_result", p_data: { feedbackEnabled: $("#srFeedback").checked, highlightEnabled: $("#srHlOn").checked, highlightSize: +$("#srHlSize").value, highlight: $("#srHighlight").value.trim() } });
     toast("已儲存結果頁設定");
   });
   $("#addQ").onclick = () => { $("#qlist").insertAdjacentHTML("beforeend", qCard({ id: "", prompt: "", options: TYPES.map(t => ({ text: "", type: t })), sort: (qs.at(-1)?.sort ?? 0) + 10 }, qs.length, qs.length + 1)); $("#qlist").lastElementChild.scrollIntoView({ behavior: "smooth" }); };
