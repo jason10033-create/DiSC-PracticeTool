@@ -518,23 +518,24 @@ function circleSvg(scores) {
     <circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="11" fill="#fff" stroke="#1d2233" stroke-width="4"/></svg>`;
 }
 /* 多人散點圖：每個填答者一個點；位置相近（分數雷同）的填答者會合併成同一個圓圈，圈上標示人數。
-   姓名有兩種看法：① 滑鼠移到圓圈上，立即顯示姓名（bindScatter 的自訂提示，無延遲）；
-   ② 按鈕一次顯示所有姓名（svg 加上 show-names 類別，標籤位置已自動避開彼此與其他圓圈） */
-function discScatterSvg(rows, info) {
-  // info(r) → { label, t }：提示文字裡的風格名稱與圓點顏色（後台傳入，可顯示雙型並重／三型並重／四型均衡等特殊類型）；沒傳入時用儲存的風格代碼
-  const CLUSTER_R = 5; // 視窗座標系 220×220 中，多近視為「雷同」
+   - opts.zoom：圖的大小倍率（1～4）。只放大「圓形圖與點的位置」，圓點大小與文字大小不變，所以人多時靠近的點會被拉開。
+   - opts.name／opts.style：是否在圖上顯示姓名／風格類型（兩者都不勾＝圖上不顯示文字，滑鼠移到圓圈上仍會立即顯示姓名與風格）。
+   標籤位置已自動避開彼此與其他圓圈（8 個方向 × 3 種距離，離太遠時補一條細引線）。 */
+function discScatterSvg(rows, info, opts = {}) {
+  // info(r) → { label, t }：風格名稱與圓點顏色（後台傳入，可顯示雙型並重／三型並重／四型均衡等特殊類型）；沒傳入時用儲存的風格代碼
+  const Z = Math.max(1, Math.min(4, +opts.zoom || 1)), W = 220 * Z, CLUSTER_R = 5; // 兩點在畫面上（座標系單位）相距 ≤ 5 就合併成同一個圓圈
   const groups = [];
   rows.forEach(r => {
-    const p = discPoint({ D: r.score_d, I: r.score_i, S: r.score_s, C: r.score_c });
+    const p0 = discPoint({ D: r.score_d, I: r.score_i, S: r.score_s, C: r.score_c }), p = { x: p0.x * Z, y: p0.y * Z };
     const x = info ? info(r) : { label: r.style ? styleLabel(r.style) : "", t: (r.primary_types && r.primary_types[0]) || "D" };
     let g = groups.find(g => Math.hypot(g.x - p.x, g.y - p.y) <= CLUSTER_R);
     if (!g) { g = { x: p.x, y: p.y, items: [] }; groups.push(g); }
     g.items.push({ name: r.user_name, style: x.label, t: x.t }); // 群中心固定用第一個加入者的位置
   });
   groups.forEach(g => { g.r = Math.min(7 + (g.items.length - 1) * 2.5, 16); });
-  // --- 姓名標籤位置：每個圓圈周圍嘗試 8 個方向 × 3 種距離，挑「與其他標籤、圓圈重疊最少、離圓圈最近」的位置；
-  //     離圓圈較遠時補一條細引線，避免分不清標籤屬於哪個圓圈 ---
   const FS = 8.5, LH = 10.5, textW = s => [...s].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? FS : FS * 0.58), 0);
+  const showText = !!(opts.name || opts.style);
+  const lineOf = i => opts.name && opts.style ? `${i.name}${i.style ? "（" + i.style + "）" : ""}` : opts.name ? i.name : (i.style || "—");
   const placed = [];
   const overlapArea = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
   const circleHit = (b, c) => { const nx = Math.max(b.l, Math.min(c.x, b.r)), ny = Math.max(b.t, Math.min(c.y, b.b)); return Math.hypot(c.x - nx, c.y - ny) < c.r + 0.5; };
@@ -542,12 +543,12 @@ function discScatterSvg(rows, info) {
     let c = dist * 0.4;
     placed.forEach(p => { c += overlapArea(b, p) * 3; });
     groups.forEach(g => { if (circleHit(b, g)) c += 60; });
-    const out = Math.max(0, -6 - b.l) + Math.max(0, b.r - 226) + Math.max(0, -b.t) + Math.max(0, b.b - 222); // 超出畫面的距離
+    const out = Math.max(0, -6 - b.l) + Math.max(0, b.r - (W + 6)) + Math.max(0, -b.t) + Math.max(0, b.b - (W + 2)); // 超出畫面的距離
     return c + out * 8;
   };
   const edges = [];
-  const labels = [...groups].sort((a, b) => b.items.length - a.items.length || a.y - b.y || a.x - b.x).map(g => {
-    const names = g.items.map(i => i.name), w = Math.max(...names.map(textW)) + 1, h = names.length * LH;
+  const labels = !showText ? "" : [...groups].sort((a, b) => b.items.length - a.items.length || a.y - b.y || a.x - b.x).map(g => {
+    const names = g.items.map(lineOf), w = Math.max(...names.map(textW)) + 1, h = names.length * LH;
     let best = null;
     for (const dist of [2, 9, 17]) {
       const d = g.r + dist, dd = d * 0.72;
@@ -571,20 +572,38 @@ function discScatterSvg(rows, info) {
     return `<g><circle class="dot" data-tip="${esc(tip)}" aria-label="${esc(tip.replace(/\n/g, "、"))}" cx="${g.x.toFixed(1)}" cy="${g.y.toFixed(1)}" r="${g.r}" fill="var(--${mainType})" stroke="#fff" stroke-width="2" opacity=".92"/>
       ${g.items.length > 1 ? `<text x="${g.x.toFixed(1)}" y="${(g.y + 4).toFixed(1)}" font-size="11" font-weight="800" fill="#fff" text-anchor="middle" pointer-events="none">${g.items.length}</text>` : ""}</g>`;
   }).join("");
-  return `<svg class="scatter" viewBox="0 0 220 220" role="img" aria-label="所有填答者的 DiSC 分布散點圖">${discQuadrantSvg("rep")}${dots}<g class="names" font-size="${FS}" pointer-events="none"><g class="leaders">${edges.join("")}</g>${labels}</g></svg>`;
+  // 畫面寬度 ＝ 360px × 倍率：座標系 1 單位的實際大小固定，所以圓點與文字不會跟著放大，只有圓形圖與點的間距放大
+  return `<svg class="scatter${showText ? " show-names" : ""}" viewBox="0 0 ${W} ${W}" style="width:${360 * Z}px;max-width:none" role="img" aria-label="所有填答者的 DiSC 分布散點圖"><g transform="scale(${Z})">${discQuadrantSvg("rep")}</g>${dots}<g class="names" font-size="${FS}" pointer-events="none"><g class="leaders">${edges.join("")}</g>${labels}</g></svg>`;
 }
-/* 散點圖互動：即時姓名提示（不用瀏覽器內建 title，避免延遲）＋「顯示／隱藏所有姓名」切換 */
-function bindScatter(root, toggleBtn, initialShow = false) {
-  const svg = $("svg.scatter", root); if (!svg) return;
+/* 滑鼠移到有 data-tip 的元素（散點圖的圓圈、長條圖的列）上時，立即顯示提示（不用瀏覽器內建 title，避免延遲）*/
+function bindTips(root, selector) {
   let tip = $("#scatterTip"); if (!tip) { tip = document.createElement("div"); tip.id = "scatterTip"; document.body.appendChild(tip); }
-  const move = e => { const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight; tip.style.left = Math.min(e.clientX + pad, innerWidth - w - 6) + "px"; tip.style.top = Math.min(e.clientY + pad, innerHeight - h - 6) + "px"; };
-  svg.addEventListener("mouseover", e => { const d = e.target.closest("circle.dot"); if (!d) return; tip.textContent = d.dataset.tip; tip.classList.add("on"); move(e); });
-  svg.addEventListener("mousemove", e => { if (tip.classList.contains("on")) move(e); });
-  svg.addEventListener("mouseout", e => { if (e.target.closest("circle.dot")) tip.classList.remove("on"); });
-  svg.addEventListener("mouseleave", () => tip.classList.remove("on"));
-  const apply = on => { svg.classList.toggle("show-names", on); if (toggleBtn) { toggleBtn.textContent = on ? "隱藏所有姓名" : "顯示所有姓名"; toggleBtn.setAttribute("aria-pressed", on ? "true" : "false"); } };
-  if (toggleBtn) toggleBtn.onclick = () => { const on = !svg.classList.contains("show-names"); apply(on); bindScatter.show = on; };
-  apply(initialShow);
+  const move = e => { const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight; tip.style.left = Math.max(4, Math.min(e.clientX + pad, innerWidth - w - 6)) + "px"; tip.style.top = Math.max(4, Math.min(e.clientY + pad, innerHeight - h - 6)) + "px"; };
+  root.addEventListener("mouseover", e => { const d = e.target.closest(selector); if (!d || !d.dataset.tip) return; tip.textContent = d.dataset.tip; tip.classList.add("on"); move(e); });
+  root.addEventListener("mousemove", e => { if (tip.classList.contains("on")) move(e); });
+  root.addEventListener("mouseout", e => { if (e.target.closest(selector)) tip.classList.remove("on"); });
+  root.addEventListener("mouseleave", () => tip.classList.remove("on"));
+}
+const bindScatter = root => bindTips(root, "circle.dot");
+/* 把散點圖存成 PNG 圖片（目前畫面的樣子，包含姓名／風格文字與大小）。SVG 用到的 CSS 變數與樣式先換成實際顏色，再畫到 canvas */
+async function scatterToPng(svg, filename) {
+  const root = getComputedStyle(document.documentElement), col = v => root.getPropertyValue(v).trim();
+  const vb = svg.viewBox.baseVal, px = parseFloat(svg.style.width) || 360, scale = 2; // 輸出 2 倍解析度
+  const bg = getComputedStyle(document.body).backgroundColor, card = col("--surface");
+  const clone = svg.cloneNode(true);
+  clone.setAttribute("xmlns", "http://www.w3.org/2000/svg"); clone.setAttribute("width", px * scale); clone.setAttribute("height", px * (vb.height / vb.width) * scale); clone.removeAttribute("style");
+  clone.setAttribute("font-family", `"Noto Sans TC","Microsoft JhengHei","PingFang TC",sans-serif`);
+  const st = document.createElementNS("http://www.w3.org/2000/svg", "style");
+  st.textContent = `.names{display:none}.show-names .names{display:inline}.names text{fill:#fff;stroke:rgba(15,20,40,.75);stroke-width:2.4px;paint-order:stroke;stroke-linejoin:round;font-weight:700}.names .leaders line{stroke:rgba(255,255,255,.85);stroke-width:.7}`;
+  clone.insertBefore(st, clone.firstChild);
+  let xml = new XMLSerializer().serializeToString(clone);
+  ["--D", "--I", "--S", "--C", "--brand", "--surface", "--text", "--muted"].forEach(v => { xml = xml.split(`var(${v})`).join(col(v)); });
+  const img = new Image(); img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(xml);
+  await new Promise((ok, no) => { img.onload = ok; img.onerror = () => no(new Error("圖片產生失敗")); });
+  const pad = 24, cv = document.createElement("canvas"); cv.width = img.width + pad * 2 * scale; cv.height = img.height + pad * 2 * scale;
+  const g = cv.getContext("2d"); g.fillStyle = card || bg || "#fff"; g.fillRect(0, 0, cv.width, cv.height); g.drawImage(img, pad * scale, pad * scale);
+  const blob = await new Promise(r => cv.toBlob(r, "image/png"));
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 function barsHtml(scores, suffix = "") {
   return [...TYPES].sort((a, b) => scores[b] - scores[a]).map(t => `

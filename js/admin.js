@@ -447,9 +447,11 @@ async function vReport() {
   const prim = { D: 0, I: 0, S: 0, C: 0 }; rows.forEach(r => prim[r.primary_types[0]]++);
   // 風格分布：12 種風格只統計「單一主型」者；分數接近的特殊類型（雙型並重／三型並重／四型均衡，判讀與學員結果頁一致）列在同一區塊下方
   const dist = Object.fromEntries([...STYLES.map(s => [styleLabel(s), 0]), ...SPECIAL_STYLES.map(s => [s, 0])]);
-  rows.forEach(r => { const x = resultStyle(r); if (x.kind !== "old" && dist[x.label] !== undefined) dist[x.label]++; });
+  const distNames = {}; // 每個風格的填答者姓名（滑鼠移到長條圖上時顯示）
+  rows.forEach(r => { const x = resultStyle(r); if (x.kind !== "old" && dist[x.label] !== undefined) { dist[x.label]++; (distNames[x.label] = distNames[x.label] || []).push(r.user_name); } });
   const distTotal = rows.filter(r => r.style).length, maxS = Math.max(1, ...Object.values(dist));
-  const distRow = (label, cls, st) => `<div class="bar-row ${cls}" style="grid-template-columns:110px 1fr 44px"><b>${esc(label)}</b><div class="track"><div class="fill" style="width:${dist[label] / maxS * 100}%;${st}"></div></div><span>${dist[label]}人</span></div>`;
+  const distTip = label => dist[label] ? `${label}（${dist[label]} 人）\n${distNames[label].join("、")}` : "";
+  const distRow = (label, cls, st) => `<div class="bar-row ${cls}" data-tip="${esc(distTip(label))}" style="grid-template-columns:110px 1fr 44px"><b>${esc(label)}</b><div class="track"><div class="fill" style="width:${dist[label] / maxS * 100}%;${st}"></div></div><span>${dist[label]}人</span></div>`;
   const shownSpecial = SPECIAL_STYLES.filter(s => dist[s] > 0); // 只列出實際有人的特殊類型
   const specialCls = s => s === "四型均衡" ? "" : `t-${CIRCLE.find(t => s.startsWith(TLABEL[t]))}`;
   const rated = rows.filter(r => r.accuracy_feedback);
@@ -459,7 +461,12 @@ async function vReport() {
   $("#view").innerHTML = scopeCard + `<div class="grid c2" style="margin-top:16px">
     <div class="card"><h2>主型人數分布（共 ${n} 人）</h2><p class="muted small" style="margin-top:0">分數接近者以最高分的類型計。</p>${TYPES.map(t => `<div class="bar-row t-${t}"><b>${TLABEL[t]} ${TNAME[t]}</b><div class="track"><div class="fill" style="width:${prim[t] / n * 100}%"></div></div><span>${prim[t]}人</span></div>`).join("")}</div>
     <div class="card"><h2>全體平均分數</h2>${barsHtml(avg)}</div></div>
-  <div class="card" style="margin-top:16px"><div class="row between"><h2>DiSC 分布圖</h2><button class="soft sm" id="toggleNames" aria-pressed="false">顯示所有姓名</button></div>    <div class="circleWrap" id="scatterWrap" style="max-width:360px">${discScatterSvg(rows, r => { const x = resultStyle(r); return { label: x.kind === "old" ? "" : x.label, t: x.t }; })}</div></div>
+  <div class="card" style="margin-top:16px"><div class="row between"><h2>DiSC 分布圖</h2><button class="soft sm" id="scDl">⬇ 下載圖片</button></div>
+    <div class="scatter-ctl"><label class="switch"><input type="checkbox" id="scName" ${scOpt.name ? "checked" : ""}> 顯示姓名</label>
+      <label class="switch"><input type="checkbox" id="scStyle" ${scOpt.style ? "checked" : ""}> 同時顯示風格類型</label>
+      <span class="sizectl" style="margin:0"><span class="small">圖的大小</span><input type="range" id="scZoom" min="100" max="400" step="25" value="${scOpt.zoom * 100}" aria-label="分布圖大小"><b id="scZoomV">${scOpt.zoom * 100}%</b></span></div>
+    <p class="muted small" style="margin:4px 0 8px">放大圖的大小時，只有圓形圖與點的間距會變大，圓球和文字大小不變；人數很多、點靠得很近時可以放大來拉開距離。滑鼠移到圓圈上會立即顯示姓名與風格。</p>
+    <div class="scatter-scroll" id="scatterWrap"></div></div>
   <div class="card" style="margin-top:16px"><h2>評估結果準確度回饋</h2>
     ${rated.length ? `<p class="muted">已有 ${rated.length} / ${n} 人回饋，平均 <b>${avgRate}</b> 分（滿分 5）。</p>
       ${[5, 4, 3, 2, 1].map(k => `<div class="bar-row" style="grid-template-columns:90px 1fr 44px"><b>${k}・${RATE_LABELS[k]}</b><div class="track"><div class="fill" style="width:${rateCount[k] / maxRate * 100}%;background:var(--brand)"></div></div><span>${rateCount[k]}人</span></div>`).join("")}`
@@ -469,8 +476,22 @@ async function vReport() {
     ${shownSpecial.length ? `<div class="muted small" style="margin:12px 0 2px;font-weight:700">分數接近的特殊類型</div>${shownSpecial.map(s => distRow(s, specialCls(s), s === "四型均衡" ? "background:var(--brand)" : "")).join("")}` : ""}
     <p class="muted small">僅統計使用新版測評（含風格代碼）的紀錄。12 種為「單一主型」（可帶輔型）；分數接近的雙型並重、三型並重、四型均衡（判讀與學員結果頁一致）只在有人出現時才列出。</p></div>`;
   bindScope();
-  bindScatter($("#scatterWrap"), $("#toggleNames"), !!bindScatter.show); // 切換統計範圍重新繪圖後，維持上次的「顯示姓名」狀態
+  // DiSC 分布圖：姓名／風格是否顯示、圖的大小（切換統計範圍重新繪圖後，維持上次的設定）
+  const drawScatter = () => {
+    $("#scatterWrap").innerHTML = discScatterSvg(rows, r => { const x = resultStyle(r); return { label: x.kind === "old" ? "" : x.label, t: x.t }; }, scOpt);
+    $("#scZoomV").textContent = scOpt.zoom * 100 + "%";
+  };
+  drawScatter(); bindScatter($("#scatterWrap")); // 圓圈：滑鼠移上去立即顯示姓名與風格（容器不會被重畫，只綁一次）
+  $("#scName").onchange = e => { scOpt.name = e.target.checked; drawScatter(); };
+  $("#scStyle").onchange = e => { scOpt.style = e.target.checked; drawScatter(); };
+  $("#scZoom").oninput = e => { scOpt.zoom = +e.target.value / 100; drawScatter(); };
+  $("#scDl").onclick = e => busy(e.target, async () => {
+    const scope = resGroup === "all" ? "" : "_" + (resGroup === "none" ? "未分組" : (groups.find(g => g.id === resGroup) || {}).name || "").replace(/[\\/:*?"<>|]/g, "-");
+    await scatterToPng($("#scatterWrap svg"), `DiSC分布圖${scope}.png`); toast("已下載圖片");
+  });
+  bindTips($("#view"), ".bar-row[data-tip]"); // 風格分布：滑鼠移到長條上顯示姓名列表
 }
+const scOpt = { name: false, style: false, zoom: 1 };
 
 /* ---------- 結果類型內容（看懂自己／識別他人）：預覽每一種結果類型，並可修改文字 ---------- */
 const rtSel = { self: "style:D", others: "o1:D" };

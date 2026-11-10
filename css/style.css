@@ -521,3 +521,10 @@ body.ambient::before { content:""; position:fixed; inset:0; z-index:-1; pointer-
 .hero p { opacity:1; color:var(--muted); }
 @media (max-width:560px) { .hero { padding:20px 2px 6px; } }
 .grid > .card + .card { margin-top:0; } /* 並排的兩張卡片（例如風格應對神器的「我的風格／對方的風格」）上緣對齊 */
+/* 後台 DiSC 分布圖：控制列與可捲動的圖區 */
+.scatter-ctl { display:flex; flex-wrap:wrap; align-items:center; gap:10px 22px; margin-top:6px; }
+.scatter-scroll { width:fit-content; max-width:100%; max-height:82vh; overflow:auto; margin:0 auto; }
+.scatter-scroll svg.scatter { display:block; height:auto; }
+.bar-row[data-tip] { cursor:default; }
+.scatter-ctl .sizectl > .small { min-width:0; }
+.scatter-ctl .sizectl input[type=range] { flex:0 0 200px; }
