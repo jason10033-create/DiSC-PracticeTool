@@ -533,9 +533,10 @@ function discScatterSvg(rows, info, opts = {}) {
     g.items.push({ name: r.user_name, style: x.label, t: x.t }); // 群中心固定用第一個加入者的位置
   });
   groups.forEach(g => { g.r = Math.min(7 + (g.items.length - 1) * 2.5, 16); });
-  const FS = 8.5, LH = 10.5, textW = s => [...s].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? FS : FS * 0.58), 0);
+  const FS = 8.5, FS2 = 7.6, LH = 10.5, GAP = 3, textW = (s, fs = FS) => [...s].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? fs : fs * 0.58), 0);
   const showText = !!(opts.name || opts.style);
-  const lineOf = i => opts.name && opts.style ? `${i.name}${i.style ? "（" + i.style + "）" : ""}` : opts.name ? i.name : (i.style || "—");
+  // 每個人的標籤：只顯示姓名／只顯示風格＝1 行；兩個都勾＝姓名在第一行、風格類型在第二行（較小字），整塊置中
+  const linesOf = i => opts.name && opts.style ? [{ t: i.name, fs: FS }, ...(i.style ? [{ t: i.style, fs: FS2 }] : [])] : opts.name ? [{ t: i.name, fs: FS }] : [{ t: i.style || "—", fs: FS }];
   const placed = [];
   const overlapArea = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
   const circleHit = (b, c) => { const nx = Math.max(b.l, Math.min(c.x, b.r)), ny = Math.max(b.t, Math.min(c.y, b.b)); return Math.hypot(c.x - nx, c.y - ny) < c.r + 0.5; };
@@ -548,7 +549,7 @@ function discScatterSvg(rows, info, opts = {}) {
   };
   const edges = [];
   const labels = !showText ? "" : [...groups].sort((a, b) => b.items.length - a.items.length || a.y - b.y || a.x - b.x).map(g => {
-    const names = g.items.map(lineOf), w = Math.max(...names.map(textW)) + 1, h = names.length * LH;
+    const blocks = g.items.map(linesOf), all = blocks.flat(), w = Math.max(...all.map(l => textW(l.t, l.fs))) + 1, h = all.length * LH + (blocks.length - 1) * GAP;
     let best = null;
     for (const dist of [2, 9, 17]) {
       const d = g.r + dist, dd = d * 0.72;
@@ -563,7 +564,10 @@ function discScatterSvg(rows, info, opts = {}) {
     }
     placed.push(best);
     if (best.dist > 2) edges.push(`<line x1="${g.x.toFixed(1)}" y1="${g.y.toFixed(1)}" x2="${best.ax.toFixed(1)}" y2="${best.ay.toFixed(1)}"/>`);
-    return names.map((n, i) => `<text x="${best.tx.toFixed(1)}" y="${(best.t + 7.6 + i * LH).toFixed(1)}" text-anchor="${best.anchor}">${esc(n)}</text>`).join("");
+    // 文字整塊置中於標籤方塊：方塊在錨點右側（start）→ 中心在 ax + w/2；左側（end）→ ax - w/2；上下（middle）→ ax
+    const cx = best.anchor === "start" ? best.ax + w / 2 : best.anchor === "end" ? best.ax - w / 2 : best.ax;
+    let yy = best.t + 7.6;
+    return blocks.map(b => b.map(l => { const s = `<text x="${cx.toFixed(1)}" y="${yy.toFixed(1)}" text-anchor="middle"${l.fs !== FS ? ` font-size="${l.fs}"` : ""}>${esc(l.t)}</text>`; yy += LH; return s; }).join("") + (yy += GAP, "")).join("");
   }).join("");
   const dots = groups.map(g => {
     const cnt = {}; g.items.forEach(i => cnt[i.t] = (cnt[i.t] || 0) + 1);
