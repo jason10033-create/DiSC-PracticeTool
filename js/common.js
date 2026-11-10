@@ -536,7 +536,7 @@ function discScatterSvg(rows, info, opts = {}) {
   const FS = 8.5, FS2 = 7.6, LH = 10.5, GAP = 3, textW = (s, fs = FS) => [...s].reduce((a, c) => a + (c.charCodeAt(0) > 255 ? fs : fs * 0.58), 0);
   const showText = !!(opts.name || opts.style);
   // 每個人的標籤：只顯示姓名／只顯示風格＝1 行；兩個都勾＝姓名在第一行、風格類型在第二行（較小字），整塊置中
-  const linesOf = i => opts.name && opts.style ? [{ t: i.name, fs: FS }, ...(i.style ? [{ t: i.style, fs: FS2 }] : [])] : opts.name ? [{ t: i.name, fs: FS }] : [{ t: i.style || "—", fs: FS }];
+  const linesOf = i => opts.name && opts.style ? [{ t: i.name, fs: FS }, ...(i.style ? [{ t: "（" + i.style + "）", fs: FS2 }] : [])] : opts.name ? [{ t: i.name, fs: FS }] : [{ t: i.style ? "（" + i.style + "）" : "—", fs: FS }];
   const placed = [];
   const overlapArea = (a, b) => Math.max(0, Math.min(a.r, b.r) - Math.max(a.l, b.l)) * Math.max(0, Math.min(a.b, b.b) - Math.max(a.t, b.t));
   const circleHit = (b, c) => { const nx = Math.max(b.l, Math.min(c.x, b.r)), ny = Math.max(b.t, Math.min(c.y, b.b)); return Math.hypot(c.x - nx, c.y - ny) < c.r + 0.5; };
