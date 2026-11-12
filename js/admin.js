@@ -587,9 +587,73 @@ async function vLogic(kind) {
 /* ---------- 彈性調適 ---------- */
 let adaptMap = {};
 const loadAdapt = async () => { adaptMap = Object.fromEntries((await select("adapt_content", "select=key,data")).map(r => [r.key, r.data])); };
+/* 教材圖片區：上傳圖片，顯示在前台「基本應對原則」頁（四型說明下方）；可設定圖說、顯示大小（占內容寬度 %）、對齊、顯示在哪一型 */
+let aiState = { title: ADAPT_IMG_TITLE, items: [] };
+function drawAdaptImages() {
+  const s = aiState, root = $("#aiCard"), pct = x => Math.min(100, Math.max(10, Math.round(+x.width) || 100));
+  const scopeOpts = x => [["all", "每一型都顯示"], ...TYPES.map(t => [t, `只在 ${TLABEL[t]} ${TNAME[t]} 顯示`])].map(([v, t]) => `<option value="${v}" ${(x.for || "all") === v ? "selected" : ""}>${t}</option>`).join("");
+  root.innerHTML = `<h2>🖼 教材圖片（顯示在前台「基本應對原則」頁）</h2>
+    <p class="muted">在四型說明的下方加一個教材圖片區，可上傳多張圖片，並調整每張圖的顯示大小。沒有圖片時，前台不會出現這個區塊。</p>
+    <label class="f">區塊標題（留空＝不顯示標題）</label><input type="text" id="aiTitle" value="${esc(s.title)}" style="max-width:360px">
+    <div id="aiItems" style="margin-top:12px">${s.items.map((x, i) => `<div class="blockedit"><div class="row between"><b>圖片 ${i + 1}</b>
+      <span><button class="ghost sm" data-aimv="${i}:-1">↑</button> <button class="ghost sm" data-aimv="${i}:1">↓</button> <button class="danger sm" data-airm="${i}">✕</button></span></div>
+      <input type="text" data-ai="${i}" data-f="url" placeholder="圖片網址（上傳後會自動填入）" value="${esc(x.url || "")}">
+      <input type="text" data-ai="${i}" data-f="caption" placeholder="圖說（選填）" value="${esc(x.caption || "")}">
+      <div class="row" style="margin-top:6px"><input type="file" accept="image/*" data-aiup="${i}" style="max-width:300px"><span class="small muted" data-aist="${i}">或貼上網址；檔案上限 50MB</span></div>
+      <div class="row" style="margin-top:10px;gap:10px"><b class="small">顯示大小</b>
+        <input type="range" min="10" max="100" step="5" value="${pct(x)}" data-ai="${i}" data-f="width" style="max-width:240px">
+        <span class="small" data-aiw="${i}" style="min-width:42px"><b>${pct(x)}%</b></span>
+        <b class="small" style="margin-left:8px">對齊</b>
+        <select data-ai="${i}" data-f="align" style="max-width:110px">${[["left", "靠左"], ["center", "置中"], ["right", "靠右"]].map(([v, t]) => `<option value="${v}" ${(x.align || "center") === v ? "selected" : ""}>${t}</option>`).join("")}</select>
+        <b class="small" style="margin-left:8px">顯示於</b>
+        <select data-ai="${i}" data-f="for" style="max-width:190px">${scopeOpts(x)}</select></div></div>`).join("") || `<p class="muted">尚未新增圖片。</p>`}</div>
+    <div class="row" style="margin-top:12px"><button class="soft sm" id="aiAdd">＋ 新增圖片</button></div>
+    <div class="row" style="margin-top:14px"><button id="aiSave">💾 儲存教材圖片</button></div>
+    <h3 style="margin-top:18px">預覽</h3><p class="small muted" style="margin:0 0 6px">以下列出所有圖片；前台依「顯示於」只顯示符合所選風格的圖片。</p>
+    <div class="narrow"><div class="card" id="aiPv"></div></div>`;
+  const pv = () => {
+    const box = $("#aiPv"), t = $("#aiTitle").value.trim(), items = s.items.filter(x => safeUrl(x.url));
+    box.innerHTML = (t ? `<h2 style="margin-bottom:8px">${esc(t)}</h2>` : "") + (items.map(x => `<div style="margin-top:6px"><span class="pill" style="background:${x.for && x.for !== "all" ? `var(--${x.for})` : "var(--muted)"}">${x.for && x.for !== "all" ? TLABEL[x.for] + " 型" : "每一型"}</span></div>${renderBlock({ ...x, type: "image" })}`).join("") || `<p class="muted">（尚無圖片）</p>`);
+  };
+  pv();
+  $("#aiTitle").oninput = () => { s.title = $("#aiTitle").value; pv(); };
+  $("#aiAdd").onclick = () => { s.title = $("#aiTitle").value; s.items.push({ url: "", caption: "", width: 100, align: "center", for: "all" }); drawAdaptImages(); };
+  const box = $("#aiItems");
+  box.addEventListener("input", ev => {
+    const t = ev.target; if (t.dataset.ai === undefined) return;
+    const x = s.items[+t.dataset.ai];
+    if (t.dataset.f === "width") { x.width = +t.value; $(`[data-aiw="${t.dataset.ai}"]`, box).innerHTML = `<b>${t.value}%</b>`; } else x[t.dataset.f] = t.value;
+    pv();
+  });
+  box.addEventListener("click", ev => {
+    const t = ev.target.closest("button"); if (!t) return;
+    s.title = $("#aiTitle").value;
+    if (t.dataset.airm !== undefined) { s.items.splice(+t.dataset.airm, 1); drawAdaptImages(); }
+    if (t.dataset.aimv) { const [i, d] = t.dataset.aimv.split(":").map(Number), j = i + d; if (s.items[j]) { [s.items[i], s.items[j]] = [s.items[j], s.items[i]]; drawAdaptImages(); } }
+  });
+  box.addEventListener("change", async ev => {
+    const t = ev.target; if (t.dataset.aiup === undefined || !t.files[0]) return;
+    const i = +t.dataset.aiup, st = $(`[data-aist="${i}"]`, box); st.textContent = "上傳中…"; t.disabled = true;
+    try {
+      const fd = new FormData(); fd.append("password", PW); fd.append("file", t.files[0]);
+      const r = await fetch(MEDIA_FN, { method: "POST", headers: { apikey: SUPABASE_KEY }, body: fd }), j = await r.json();
+      if (!r.ok) throw new Error(j.error || "上傳失敗");
+      s.title = $("#aiTitle").value; s.items[i].url = j.url; drawAdaptImages(); toast("上傳完成");
+    } catch (err) { st.textContent = "上傳失敗：" + err.message; t.disabled = false; }
+  });
+  $("#aiSave").onclick = e => busy(e.target, async () => {
+    s.title = $("#aiTitle").value.trim();
+    const items = s.items.filter(x => safeUrl(x.url)).map(x => ({ url: x.url.trim(), caption: (x.caption || "").trim(), width: Math.min(100, Math.max(10, Math.round(+x.width) || 100)), align: x.align || "center", for: x.for || "all" }));
+    if (items.length || s.title !== ADAPT_IMG_TITLE) await A("admin_upsert_site", { p_key: "adapt_images", p_data: { title: s.title, items } }); else await A("admin_delete_site", { p_key: "adapt_images" });
+    s.items = items; toast("已儲存"); drawAdaptImages();
+  });
+}
 async function vTypes() {
   await loadAdapt();
-  $("#view").innerHTML = `<p class="muted">調整 D、i、S、C 四種風格的基本對應之道。「已自訂」表示已覆寫預設內容；「還原預設」會刪除自訂。每行一條。</p>
+  const aiRow = (await select("site_content", "key=eq.adapt_images&select=key,data"))[0];
+  aiState = { title: ADAPT_IMG_TITLE, items: [], ...((aiRow && aiRow.data) || {}) };
+  if (!Array.isArray(aiState.items)) aiState.items = [];
+  $("#view").innerHTML = `<p class="muted">調整 D、i、S、C 四種風格的基本對應之道。「已自訂」表示已覆寫預設內容；「還原預設」會刪除自訂。每行一條。想加上自己的教材圖片，請看最下方的「教材圖片」。</p>
   ${TYPES.map(t => { const d = getType(adaptMap, t), ed = isEdited(adaptMap, "type:" + t); return `
   <div class="card t-${t}" data-t="${t}" style="border-top:6px solid var(--c)"><div class="row between"><h2 style="color:var(--c)">${TLABEL[t]} ${TNAME[t]} ${ed ? `<span class="pill" style="background:var(--brand)">已自訂</span>` : ""}</h2></div>
     <label class="f">簡介</label><textarea data-f="summary" style="min-height:60px">${esc(d.summary)}</textarea>
@@ -597,7 +661,9 @@ async function vTypes() {
     <label class="f">這樣溝通（每行一條）</label><textarea data-f="dos">${esc(d.dos.join("\n"))}</textarea>
     <label class="f">避免（每行一條）</label><textarea data-f="donts">${esc(d.donts.join("\n"))}</textarea>
     <label class="f">讓他買單的一句話</label><textarea data-f="tip" style="min-height:60px">${esc(d.tip)}</textarea>
-    <div class="row" style="margin-top:12px"><button data-save="${t}">💾 儲存</button><button class="ghost" data-reset="${t}" ${ed ? "" : "disabled"}>還原預設</button></div></div>`; }).join("")}`;
+    <div class="row" style="margin-top:12px"><button data-save="${t}">💾 儲存</button><button class="ghost" data-reset="${t}" ${ed ? "" : "disabled"}>還原預設</button></div></div>`; }).join("")}
+  <div class="card" id="aiCard" style="margin-top:16px"></div>`;
+  drawAdaptImages();
   $$("[data-save]").forEach(b => b.onclick = () => busy(b, async () => {
     const c = b.closest(".card"), g = f => $(`[data-f="${f}"]`, c).value;
     await A("admin_upsert_adapt", { p_key: "type:" + b.dataset.save, p_data: { summary: g("summary").trim(), want: g("want").trim(), stress: g("stress").trim(), dos: lines(g("dos")), donts: lines(g("donts")), tip: g("tip").trim() } });

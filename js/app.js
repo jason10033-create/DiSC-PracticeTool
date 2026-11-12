@@ -431,7 +431,8 @@ function renderTypes() {
   $("#adaptBody").innerHTML = `<div class="card"><p class="muted" style="margin:0 0 10px">請選擇一種 DiSC 風格，查看基本應對原則：</p>
     ${MASCOT_ON ? `<div class="mk-picks">${TYPES.map(t => `<button class="mk-pick t-${t} ${typesSel === t ? "on" : ""}" data-tsel="${t}">${mk(t, { size: "tp" })}<b>${TLABEL[t]} ${TNAME[t]}</b></button>`).join("")}</div>`
       : `<div class="row" style="gap:8px">${TYPES.map(t => `<button class="chip t-${t} ${typesSel === t ? "on" : ""}" data-tsel="${t}">${TLABEL[t]} ${TNAME[t]}</button>`).join("")}</div>`}</div>
-    ${typesSel ? typeCard(typesSel) : `<div class="card" style="margin-top:16px;text-align:center"><p class="muted">請先在上方選擇一種風格。</p></div>`}`;
+    ${typesSel ? typeCard(typesSel) : `<div class="card" style="margin-top:16px;text-align:center"><p class="muted">請先在上方選擇一種風格。</p></div>`}
+    ${adaptImagesHtml(SITE, typesSel)}`;
   $$("[data-tsel]").forEach(b => b.onclick = () => { typesSel = b.dataset.tsel; renderTypes(); });
 }
 const pickStyle = sel => STYLES.find(x => x.toLowerCase() === (sel.p + (sel.s || "")).toLowerCase()) || sel.p;

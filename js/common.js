@@ -86,6 +86,16 @@ function renderBlock(b) {
   }
 }
 
+/* 彈性調適「基本應對原則」頁的教材圖片區（site_content 的 adapt_images）：{ title, items:[{ url, caption, width, align, for }] }
+   for＝"all"（每一型都顯示）或 D／I／S／C（只在選到該風格時顯示）；width／align 與教材圖片區塊相同。t＝目前選到的風格（尚未選＝null） */
+const ADAPT_IMG_TITLE = "補充教材";
+const adaptImgCfg = site => { const c = (site && site.adapt_images) || {}; return { title: c.title == null ? ADAPT_IMG_TITLE : c.title, items: Array.isArray(c.items) ? c.items : [] }; };
+function adaptImagesHtml(site, t) {
+  const cfg = adaptImgCfg(site), items = cfg.items.filter(x => safeUrl(x.url) && (!x.for || x.for === "all" || x.for === t));
+  if (!items.length) return "";
+  return `<div class="card adapt-imgs" style="margin-top:16px">${cfg.title ? `<h2 style="margin-bottom:8px">${esc(cfg.title)}</h2>` : ""}${items.map(x => renderBlock({ ...x, type: "image" })).join("")}</div>`;
+}
+
 /* ============ DiSC 核心資料 ============ */
 const TYPES = ["D", "I", "S", "C"];
 const STYLES = ["D", "Di", "DC", "I", "IS", "ID", "C", "CS", "CD", "S", "Si", "SC"];
