@@ -1,13 +1,15 @@
-/* 評審版 Demo 影片（前台段）：開場 → 痛點 → 四大功能實際操作 → 自動接續後台（judge-admin.html）
+/* 評審版 Demo 影片（前台段）：開場 → 痛點 → 四大功能依序（①→④）實際操作 → 自動接續後台（judge-admin.html）
    要改影片上的字，只要改下面 T 這一段；兩行字幕用 \n 分開（第二行自動縮小）。*/
 (() => {
   /* ================= 字幕與字卡文字 ================= */
   const T = {
     open: { kick: "MOXA AI 創客獎 ・ Demo", title: "DiSC 人際風格實踐平台", sub: "把一天的溝通課程，變成每天都用得到的溝通工具" },
     pain: { kick: "痛點", title: "溝通的隔閡，每天都在消耗團隊",
-      points: ["風格不同 → 誤解、重工、會議空轉，彼此越來越難信任", "上完 DiSC 課回到工作，三週後只記得「我是 D 型」", "遇到難溝通的情境，當下沒有工具能查「該怎麼跟他說」"],
+      points: ["風格不同 → 誤解、重工、會議空轉，彼此越來越難信任", "沒學過 DiSC 不知從何開始；上過課的，三週後只記得「我是 D 型」", "遇到難溝通的情境，當下沒有工具能查「該怎麼跟他說」"],
       src: "全球職場平均每人每週花 2.1 小時處理衝突（CPP Global Human Capital Report, 2008）" },
     home: "四個步驟：學原理 → 看懂自己 → 識別他人 → 彈性調適\n手機、電腦都能用，打開網址就能上手",
+    tools1: "① 解密工具\n沒學過 DiSC 也沒關係：從四種風格的基本觀念開始",
+    tools2: "教材、圖卡、重點觀念，幾分鐘就能看懂\n上過課的同仁，也能隨時回來複習",
     self1: "② 看懂自己\n15 題自我測評：逐項勾選施測須知，才能開始作答",
     self2: "每題選「最像我」與「最不像我」",
     self3: "作答完成，立即計分並判讀風格\n共 23 種結果類型（含主型與輔型）",
@@ -19,7 +21,6 @@
     adapt2: "風格應對神器：選好「自己」與「對方」的風格\n12 × 12 = 144 種組合，各有專屬攻略",
     adapt3: "再選關係方向：上對下、下對上、平行單位\n同一組合，不同對象的溝通方法不一樣",
     adapt4: "具體告訴你：怎麼調整、避免踩雷、如何找到共識",
-    tools1: "① 解密工具\n課後隨時回來複習：教材、圖卡、重點觀念",
     toAdmin: { kick: "講師／HR 視角", title: "管理後台", sub: "一個後台，管理全部內容與學員結果" },
     demoName: "示範學員"
   };
@@ -40,6 +41,13 @@
     // 首頁
     location.hash = "#/"; await q(".feature"); await cap(T.home); await wait(1200);
     for (const id of ["tools", "self", "others", "adapt"]) { await moveTo(await q(`.feature[data-f="${id}"]`), { dur: 0.5 }); await wait(220); }
+
+    // ① 解密工具：沒學過 DiSC 也能從這裡開始
+    tag("① 解密工具"); await cap(T.tools1); await click(await q('.feature[data-f="tools"]'), { after: 600 });
+    await q(".article-item"); await wait(1600);
+    await click(await q(".article-item"), { after: 900 }); await cap(T.tools2); await cp("tools");
+    await scrollTo(Math.min(640, document.documentElement.scrollHeight), 1400); await wait(1600); await scrollTo(0, 800);
+    await home();
 
     // ② 看懂自己：實際作答 15 題
     tag("② 看懂自己"); await cap(T.self1); await click(await q('.feature[data-f="self"]'), { after: 900 });
@@ -100,12 +108,6 @@
     await scrollTo(0, 900);
     const down = document.querySelector('.chip[data-dir="down"]'); if (down) { await click(down, { dur: 0.6, after: 400 }); await click(await q("#queryBtn"), { after: 1200 }); const d2 = await q(".mk-duo, #adaptBody .card:last-child"); await scrollToEl(d2, 120); await wait(2200); await scrollTo(0, 800); }
     await home();
-
-    // ① 解密工具（簡短）
-    tag("① 解密工具"); await cap(T.tools1); await click(await q('.feature[data-f="tools"]'), { after: 600 });
-    await q(".article-item"); await wait(1100);
-    await click(await q(".article-item"), { after: 900 });
-    await scrollTo(Math.min(640, document.documentElement.scrollHeight), 1400); await wait(900);
 
     // 接續後台
     tag(""); await cap(""); await card(T.toAdmin, 1400); await cp("to-admin");
