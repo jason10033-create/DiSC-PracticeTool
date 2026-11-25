@@ -21,6 +21,7 @@
     adapt2: "風格應對神器：選好「自己」與「對方」的風格\n12 × 12 = 144 種組合，各有專屬攻略",
     adapt3: "再選關係方向：上對下、下對上、平行單位\n同一組合，不同對象的溝通方法不一樣",
     adapt4: "具體告訴你：怎麼調整、避免踩雷、如何找到共識",
+    toolsArticle: "四種風格速覽",   // 解密工具示範時要點開的文章標題
     toAdmin: { kick: "講師／HR 視角", title: "管理後台", sub: "一個後台，管理全部內容與學員結果" },
     demoName: "示範學員"
   };
@@ -45,7 +46,8 @@
     // ① 解密工具：沒學過 DiSC 也能從這裡開始
     tag("① 解密工具"); await cap(T.tools1); await click(await q('.feature[data-f="tools"]'), { after: 600 });
     await q(".article-item"); await wait(1600);
-    await click(await q(".article-item"), { after: 900 }); await cap(T.tools2); await cp("tools");
+    const art = [...document.querySelectorAll(".article-item")].find(b => b.textContent.includes(T.toolsArticle)) || document.querySelector(".article-item");
+    await click(art, { after: 900 }); await cap(T.tools2); await cp("tools");
     await scrollTo(Math.min(640, document.documentElement.scrollHeight), 1400); await wait(1600); await scrollTo(0, 800);
     await home();
 
