@@ -65,7 +65,7 @@ window.DK = (() => {
   /* ---------- 字幕／字卡 ---------- */
   const cap = async text => { capEl.classList.remove("on"); await realWait(260 / SPEED); const [a, b] = String(text || "").split("\n"); capEl.innerHTML = `${a || ""}${b ? `<span class="l2">${b}</span>` : ""}`; if (text) capEl.classList.add("on"); };
   const tag = text => { tagEl.textContent = text || ""; tagEl.classList.toggle("on", !!text); };
-  /* 字卡：c = { kick, title, sub, line, src, url, points:[…], stats:[[數字, 說明]…], orb:true }，ms＝停留時間；points / stats 會逐一出現 */
+  /* 字卡：c = { kick, title, sub, line, src, url, points:[…], stats:[[數字, 說明]…], orb:true }，ms＝停留時間（o.real 為 true 時是實際毫秒）；points / stats 會逐一出現 */
   const card = async (c, ms, o = {}) => {
     cardEl.classList.toggle("instant", !!o.instant);
     cardEl.innerHTML = `${c.orb === false ? "" : ORB}${c.kick ? `<p class="kick">${c.kick}</p>` : ""}${c.title ? `<h1>${br(c.title)}</h1>` : ""}${c.sub ? `<p class="sub">${br(c.sub)}</p>` : ""}
@@ -75,7 +75,7 @@ window.DK = (() => {
     cardEl.classList.add("on"); if (o.instant) { cardEl.offsetHeight; cardEl.classList.remove("instant"); }
     const items = [...cardEl.querySelectorAll(".pt, .stat")];
     if (items.length) { await wait(900); for (const e of items) { e.classList.add("on"); await wait(o.step ?? 1500); } }
-    await wait(ms);
+    await (o.real ? realWait : wait)(ms);   // o.real：ms 是實際毫秒，不受 ?speed 影響
   };
   const cardOff = async () => { cardEl.classList.remove("on"); await wait(700); };
 

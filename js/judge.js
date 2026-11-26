@@ -3,21 +3,21 @@
 (() => {
   /* ================= 字幕與字卡文字 ================= */
   const T = {
-    open: { kick: "MOXA AI 創客獎 ・ Demo", title: "DiSC 人際風格實踐平台", sub: "讓DiSC人際風格，真正成為每天都能用的溝通工具" },
-    pain: { kick: "痛點", title: "溝通的隔閡，每天都在消耗團隊",
+    open: { kick: "MOXA AI 創客獎 ・ Demo", title: "DiSC 人際風格實踐平台", sub: "讓DiSC，真正成為每天都能用的溝通工具" },
+    pain: { kick: "", title: "溝通的隔閡，每天都在消耗團隊",
       points: ["風格不同 → 造成誤解、衝突、會議空轉，彼此越來越難信任", "沒學過 DiSC 不知從何開始；上過課的，三週後只記得「我是 D 型」", "遇到溝通僵局，當下沒有工具能查「該怎麼跟他說」"],
       src: "全球職場平均每人每週花 2.1 小時處理衝突（CPP Global Human Capital Report, 2008）" },
     home: "四個步驟：學習工具 → 看懂自己 → 識別他人 → 彈性調適\n手機、電腦都能立即上手",
     tools1: "① 解密工具\n沒學過 DiSC 也沒關係：從四種基本風格快速入門",
     tools2: "教材、圖卡、重點觀念，幾分鐘就能看懂\n上過課的同仁，也能隨時回來複習",
-    self1: "② 看懂自己\n15 題自我測評：逐項勾選施測須知，才能開始作答",
+    self1: "② 看懂自己\n15 題自我測評：逐項勾選施測須知，開始作答",
     self2: "每題選「最像我」與「最不像我」",
     self3: "作答完成，立即計分並判讀風格\n共 23 種結果類型（含主型與輔型）",
     self4: "一鍵下載專屬結果小卡，分享給夥伴",
     others1: "③ 識別他人\n面對不太熟的同事、主管、客戶，可以用「觀察到的行為」來判斷",
     others2: "10 題的外顯特徵觀察：憑實際看到的作答，不憑印象",
     others3: "得到「可能的類型」，不貼標籤、保留彈性",
-    adapt1: "④ 彈性調適\n先認識四種風格：在乎什麼、怎麼溝通最有效",
+    adapt1: "④ 彈性調適\n先熟悉四種風格：在乎什麼、怎麼溝通最有效",
     adapt2: "風格應對神器：選好「自己」與「對方」的風格\n12 × 12 = 144 種組合，各有專屬攻略",
     adapt3: "再選關係方向：上對下、下對上、平行單位\n同一組合，不同對象的溝通方法不一樣",
     adapt4: "具體告訴你：怎麼調整、避免踩雷、如何找到共識",
@@ -29,7 +29,9 @@
   const SELF_MOST = ["I", "I", "D", "I", "S", "I", "D", "I", "I", "S", "I", "D", "I", "S", "I"];
   const SELF_LEAST = ["C", "C", "S", "C", "C", "C", "C", "S", "C", "C", "D", "C", "C", "C", "S"];
   /* 「識別他人」示範作答（D、C 交錯 → 結果會是「D 型或 C 型」）*/
-  const OTHERS_PICK = ["D", "C", "D", "C", "D", "C", "D", "C", "I", "S"];
+  /* 作答快轉段的加速倍率（1 ＝ 原本速度，1.25 ＝ 再快 1.25 倍）*/
+  const FF = 1.25;
+  const OTHERS_PICK =["D", "C", "D", "C", "D", "C", "D", "C", "I", "S"];
   /* ================================================== */
 
   const { wait, cap, tag, card, cardOff, q, moveTo, click, type, scrollTo, scrollToEl, ff, cp, start, goPage } = DK;
@@ -37,7 +39,8 @@
   const optIdx = (opts, t) => Math.max(0, opts.findIndex(o => o.type === t));
 
   async function run() {
-    await card(T.open, 2600); await card(T.pain, 2600, { step: 1700 }); await cardOff();
+    // 開場字卡：淡入 0.6 秒後完整停留 2 秒；痛點字卡：最後一點出現後停留 3 秒（實際秒數，不受播放速度影響）
+    await card(T.open, 2600, { real: true }); await card(T.pain, 2200, { step: 1700, real: true }); await cardOff();
 
     // 首頁
     location.hash = "#/"; await q(".feature"); await cap(T.home); await wait(1200);
@@ -62,11 +65,11 @@
     const n = selfRun.qs.length;
     for (let i = 0; i < n; i++) {
       const fast = i >= 2; if (i === 2) ff(true);
-      const opts = selfRun.qs[selfRun.cur].options, sp = fast ? { dur: 0.2, after: 90 } : { dur: 0.65, after: 420 };
+      const opts = selfRun.qs[selfRun.cur].options, sp = fast ? { dur: 0.2 / FF, after: 90 / FF } : { dur: 0.65, after: 420 };
       await click(await q(`.mark.most[data-i="${optIdx(opts, SELF_MOST[i % SELF_MOST.length])}"]`), sp);
       let li = optIdx(opts, SELF_LEAST[i % SELF_LEAST.length]); if (li === optIdx(opts, SELF_MOST[i % SELF_MOST.length])) li = (li + 1) % opts.length;
       await click(await q(`.mark.least[data-i="${li}"]`), sp);
-      await click(await q("#next:not([disabled])"), fast ? { dur: 0.2, after: 160 } : { dur: 0.55, after: 600 });
+      await click(await q("#next:not([disabled])"), fast ? { dur: 0.2 / FF, after: 160 / FF } : { dur: 0.55, after: 600 });
     }
     ff(false);
     await q(".res-split, .tips", 15000); await cap(T.self3); await cp("self-result"); await wait(2800);
@@ -83,8 +86,8 @@
     for (let i = 0; i < total; i++) {
       const fast = i >= 2; if (i === 2) ff(true);
       const idx = othersRun.qs[othersRun.cur].options.findIndex(o => o.type === OTHERS_PICK[i % OTHERS_PICK.length]);
-      await click(await q(`.pick[data-i="${Math.max(0, idx)}"]`), fast ? { dur: 0.2, after: 110 } : { dur: 0.65, after: 450 });
-      await click(await q("#next"), fast ? { dur: 0.2, after: 180 } : { dur: 0.55, after: 550 });
+      await click(await q(`.pick[data-i="${Math.max(0, idx)}"]`), fast ? { dur: 0.2 / FF, after: 110 / FF } : { dur: 0.65, after: 450 });
+      await click(await q("#next"), fast ? { dur: 0.2 / FF, after: 180 / FF } : { dur: 0.55, after: 550 });
     }
     ff(false);
     await q(".styleBadge"); await cap(T.others3); await cp("others-result"); await wait(2800);

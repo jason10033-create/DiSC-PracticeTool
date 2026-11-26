@@ -11,13 +11,13 @@
     results: "填答者結果：依梯次分群組、一鍵匯出 CSV",
     combos: "144 種組合 × 3 種關係方向的應對建議\n內容都能在後台直接修改",
     types: "23 種「看懂自己」結果類型：立即預覽",
-    ai: { kick: "Vibe coding", title: "全程自然語言與 AI 協作" },
+    ai: { kick: "Vibe coding", title: "透過自然語言與 AI 協作" },
     value: { kick: "效益", title: "把無形的溝通內耗，變成有價值的對話",
       stats: [["48 人", "已實際使用\n（2026/9–11）"], ["91 工作天", "預估每年減少的溝通內耗\n（擴大至 200 人 ≒ 378 天）"]],
       src: "換算依據：CPP Global Human Capital Report（2008）每人每週 2.1 小時處理衝突" },
-    plan: { kick: "導入計畫", title: "從一堂課，到全公司的共通語言",
-      points: ["2026：DiSC人際風格工作坊正式推出", "2027：可延展至新進同仁共識營、新任主管學習旅程、各BU團隊共識營等", "開放至一般主管及同仁使用提升跨部門協作、1-on-1、日常溝通效能"] },
-    close: { title: "讓每一次溝通，都能更拉近與對方的距離", sub: "DiSC 人際風格實踐平台", url: "jason10033-create.github.io/DiSC-PracticeTool" }
+    plan: { kick: "導入計畫", title: "從一個工具，到全公司的共通語言",
+      points: ["2026：由DiSC人際風格工作坊正式推出", "2027：可延展至新進同仁共識營、新任主管學習旅程、各BU團隊活動等使用", "開放至一般主管及同仁使用，提升跨部門協作、1-on-1與日常溝通效能"] },
+    close: { title: "讓每一次溝通，都拉近與對方的距離", sub: "DiSC 人際風格實踐平台", url: "jason10033-create.github.io/DiSC-PracticeTool" }
   };
   /* ================================================== */
 
@@ -60,7 +60,7 @@
     tag(""); await cap("");
     await card(T.ai, 2200, { step: 1700 });
     await card(T.value, 2600, { step: 1500 });
-    await card(T.plan, 2200, { step: 1700 }); await cp("close");
+    await card(T.plan, 4400, { step: 3400 }); await cp("close");   // 導入計畫：停留時間為原本的 2 倍
     await card(T.close, 5000);
   }
   start(run, { coverFirst: T.toAdmin, ready: () => document.querySelector(".sidenav") && document.querySelector("#view .card") });
