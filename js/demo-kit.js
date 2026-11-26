@@ -9,9 +9,9 @@ window.DK = (() => {
   const pass = (k => [...P].filter(([n]) => k.includes(n)).map(([n, v]) => `${n}=${encodeURIComponent(v)}`).join("&"))(["speed", "theme", "voice", "rate"]);
 
   /* ---------- AI 旁白（瀏覽器內建語音朗讀字幕與字卡）----------
-     ?voice=1 開啟（自動挑台灣中文的自然語音，建議用 Edge）；?voice=YunJhe 指定聲音名稱的一部分；?rate=2.2 語速（預設 2.2；1 ＝ 正常語速）
+     ?voice=1 開啟（自動挑台灣中文的自然語音，建議用 Edge）；?voice=YunJhe 指定聲音名稱的一部分；?rate=1.1 語速（預設 1.1；1 ＝ 正常語速）
      開啟後：每句字幕／字卡會唸出來，而且「上一句唸完」才會換下一句，聲音不會被切斷。*/
-  const VOICE = P.get("voice") || "", RATE = Math.min(4, Math.max(0.5, +P.get("rate") || 2.2));
+  const VOICE = P.get("voice") || "", RATE = Math.min(4, Math.max(0.5, +P.get("rate") || 1.1));
   const SAY = !!VOICE && VOICE !== "0" && "speechSynthesis" in window;
   let voiceObj = null; const speaking = new Set();
   const zhVoices = () => speechSynthesis.getVoices().filter(v => /^zh[-_](TW|HK|CN)/i.test(v.lang)).sort((a, b) => /TW/i.test(b.lang) - /TW/i.test(a.lang));
