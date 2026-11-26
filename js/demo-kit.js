@@ -21,10 +21,20 @@ window.DK = (() => {
   /* 把字幕文字轉成好唸的口語：去掉圈號、箭頭改成停頓、英文縮寫改成逐字母 */
   const spoken = s => String(s || "").replace(/[①②③④]/g, "").replace(/\n/g, "。").replace(/\s*→\s*/g, "，").replace(/[／]/g, "、").replace(/[（(]/g, "，").replace(/[）)]/g, "，")
     .replace(/DiSC/g, "D I S C").replace(/\bi 型/g, "I 型").replace(/×/g, "乘").replace(/＝|=/g, "等於").replace(/1-on-1/gi, "one on one").replace(/[「」]/g, "").replace(/，\s*([。，]|$)/g, "$1").trim();
+  /* 唸出一句。出錯時自動補救：先把語速降到 2 倍，再不行就換成電腦內建（非線上）的中文聲音；錯誤會顯示在 console 與 window.__voiceErr */
+  let rateNow = RATE;
+  const utter = (text, voice, rate) => new Promise(r => { const u = new SpeechSynthesisUtterance(text); u.lang = voice ? voice.lang : "zh-TW"; if (voice) u.voice = voice; u.rate = rate;
+    let done = false; const fin = v => { if (!done) { done = true; utter.keep.delete(u); r(v); } };
+    u.onend = () => fin(true); u.onerror = e => { window.__voiceErr = `${voice && voice.name}｜語速 ${rate}｜${e.error}`; console.warn("AI 旁白出錯：", window.__voiceErr); fin(e.error === "interrupted" || e.error === "canceled" ? true : false); };
+    utter.keep.add(u); speechSynthesis.speak(u); setTimeout(() => fin(true), 4000 + text.length * 420 / rate); });
+  utter.keep = new Set();   // 保留引用，避免 Chrome／Edge 把還沒唸完的語音回收掉
   const speak = text => { if (!SAY || !(text = spoken(text))) return Promise.resolve();
-    const u = new SpeechSynthesisUtterance(text); u.lang = voiceObj ? voiceObj.lang : "zh-TW"; if (voiceObj) u.voice = voiceObj; u.rate = RATE;
-    const p = new Promise(r => { const end = () => { speaking.delete(p); r(); }; u.onend = end; u.onerror = end; setTimeout(end, 4000 + text.length * 420 / RATE); });
-    p.u = u; speaking.add(p); speechSynthesis.speak(u); return p; };
+    const p = (async () => {
+      if (await utter(text, voiceObj, rateNow)) return;
+      if (rateNow > 2) { rateNow = 2; if (await utter(text, voiceObj, rateNow)) return; }
+      const local = zhVoices().find(v => v.localService && v !== voiceObj); if (local) { voiceObj = local; await utter(text, voiceObj, rateNow); }
+    })().finally(() => speaking.delete(p));
+    speaking.add(p); return p; };
   const spoke = () => Promise.all([...speaking]);   // 等目前的旁白唸完
 
   const css = document.createElement("style");
@@ -124,7 +134,7 @@ window.DK = (() => {
     if (coverFirst) card(coverFirst, 0, { instant: true, silent: true }); // 從上一頁接續時，先蓋上同一張字卡，避免看到頁面載入的過程
     const begin = async () => {
       document.getElementById("demoStart")?.remove();
-      try { if (SAY) { await voicesReady(); voiceObj = pickVoice(); speechSynthesis.cancel(); }
+      try { if (SAY) { await voicesReady(); voiceObj = voiceObj || pickVoice(); speechSynthesis.cancel(); }
         while (!ready()) await realWait(100); window.scrollTo(0, 0); await realWait(400); await run(); window.__demoDone = true; }
       catch (e) { console.error(e); capEl.textContent = "示範中斷：" + e.message; capEl.classList.add("on"); window.__demoError = e.message; }
     };
@@ -139,10 +149,15 @@ window.DK = (() => {
       <p>2. 開始錄影（Windows：<b>Win ＋ Alt ＋ R</b>，或 Clipchamp 螢幕錄製）${SAY ? "，記得<b>錄進系統聲音</b>" : ""}</p>
       <p>3. 按下 <b>空白鍵</b> 開始自動播放，前台播完會自動接續到後台${SAY ? "<br>（AI 旁白開啟時：換到後台後畫面會停在字卡，<b>再按一次空白鍵</b>繼續）" : ""}</p>
       ${SAY ? `<p id="dkVoice" style="color:#ffd27a">🔊 AI 旁白：讀取聲音中…</p>` : `<p style="color:#8a93ad">想加 AI 旁白：網址後面加 <b>?voice=1</b>（建議用 Edge）</p>`}
+      ${SAY ? `<button class="go" id="dkTest" style="background:#2c3350;font-size:18px;padding:8px 26px">🔈 先試聽（用滑鼠點）</button><p id="dkTestMsg" style="font-size:16px;min-height:1.9em"></p>` : ""}
       <button class="go" id="demoGo">按空白鍵（或點這裡）開始</button>`);
     document.getElementById("demoGo").onclick = go;
-    if (SAY) voicesReady().then(() => { const v = pickVoice(), el = document.getElementById("dkVoice"); if (!el) return;
+    if (SAY) voicesReady().then(() => { const v = voiceObj = pickVoice(), el = document.getElementById("dkVoice"); if (!el) return;
       el.innerHTML = v ? `🔊 AI 旁白：<b>${v.name}</b>　語速 ${RATE}<br><span style="font-size:15px;color:#8a93ad">可換聲音：${zhVoices().filter(x => /TW/i.test(x.lang)).map(x => x.name.replace(/^Microsoft\s+|\s+-\s+.*$/g, "")).join("、") || "（無）"}</span>` : "⚠ 找不到中文語音，請改用 Edge 開啟"; });
+    if (SAY) document.getElementById("dkTest").onclick = async () => { const m = document.getElementById("dkTestMsg"); m.style.color = "#b9c0d6"; m.textContent = "播放中…（如果沒聽到，請檢查喇叭／音量）";
+      window.__voiceErr = ""; speechSynthesis.cancel(); await voicesReady(); voiceObj = voiceObj || pickVoice(); await speak("這是 AI 旁白的試聽，聽得到就可以開始錄影了");
+      m.style.color = window.__voiceErr ? "#ff9b8a" : "#9be3a8";
+      m.textContent = window.__voiceErr ? `語音出錯：${window.__voiceErr}${voiceObj ? `　→ 已自動改用「${voiceObj.name}」、語速 ${rateNow}，請再試聽一次` : ""}` : `✓ 播放完成（${voiceObj ? voiceObj.name : "預設聲音"}，語速 ${rateNow}）`; };
   }
   /* 換頁（前台 → 後台），保留速度與主題參數 */
   const goPage = (href, extra = "") => { location.href = `${href}?auto=1${pass ? "&" + pass : ""}${extra}`; };
