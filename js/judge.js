@@ -5,11 +5,11 @@
   const T = {
     open: { kick: "MOXA AI 創客獎 ・ Demo", title: "DiSC 人際風格實踐平台", sub: "讓DiSC，真正成為每天都能用的溝通工具" },
     pain: { kick: "", title: "溝通的隔閡，每天都在消耗團隊",
-      points: ["風格不同 → 造成誤解、衝突、會議空轉，彼此越來越難信任", "沒學過 DiSC 不知從何開始；上過課的，三週後只記得「我是 D 型」", "遇到溝通僵局，當下沒有工具能查「該怎麼跟他說」"],
+      points: ["風格不同 → 造成誤解、衝突、會議空轉，彼此越來越難信任", "沒學過 DiSC 不知從何開始；上過課的，幾週後只記得「我是 D 型」", "遇到溝通僵局，當下沒有工具能查「該怎麼跟他說」"],
       src: "全球職場平均每人每週花 2.1 小時處理衝突（CPP Global Human Capital Report, 2008）" },
     home: "四個步驟：學習工具 → 看懂自己 → 識別他人 → 彈性調適\n手機、電腦都能立即上手",
     tools1: "① 解密工具\n沒學過 DiSC 也沒關係：從四種基本風格快速入門",
-    tools2: "教材、圖卡、重點觀念，幾分鐘就能看懂\n上過課的同仁，也能隨時回來複習",
+    tools2: "教材、圖卡、重點觀念，幾分鐘就能看懂\n學習過的同仁，也能隨時回來複習",
     self1: "② 看懂自己\n15 題自我測評：逐項勾選施測須知，開始作答",
     self2: "每題選「最像我」與「最不像我」",
     self3: "作答完成，立即計分並判讀風格\n共 23 種結果類型（含主型與輔型）",
@@ -21,7 +21,8 @@
     adapt2: "風格應對神器：選好「自己」與「對方」的風格\n12 × 12 = 144 種組合，各有專屬攻略",
     adapt3: "再選關係方向：上對下、下對上、平行單位\n同一組合，不同對象的溝通方法不一樣",
     adapt4: "具體告訴你：怎麼調整、避免踩雷、如何找到共識",
-    toolsArticle: "四種風格速覽",   // 解密工具示範時要點開的文章標題
+    toolsModel: "DiSC 標準模型",    // 解密工具示範：先點開這篇，滑到圖形並暫時切成淺色模式
+    toolsArticle: "四種風格速覽",   // 解密工具示範：接著點開這篇，慢慢滑過 D、i、S、C
     toAdmin: { kick: "講師／HR 視角", title: "管理後台", sub: "一個後台，管理全部內容與學員結果" },
     demoName: "示範學員"
   };
@@ -30,7 +31,7 @@
   const SELF_LEAST = ["C", "C", "S", "C", "C", "C", "C", "S", "C", "C", "D", "C", "C", "C", "S"];
   /* 「識別他人」示範作答（D、C 交錯 → 結果會是「D 型或 C 型」）*/
   /* 作答快轉段的加速倍率（1 ＝ 原本速度，1.25 ＝ 再快 1.25 倍）*/
-  const FF = 1.25;
+  const FF = 1.5625;   // 1.25 × 1.25
   const OTHERS_PICK =["D", "C", "D", "C", "D", "C", "D", "C", "I", "S"];
   /* ================================================== */
 
@@ -49,9 +50,28 @@
     // ① 解密工具：沒學過 DiSC 也能從這裡開始
     tag("① 解密工具"); await cap(T.tools1); await click(await q('.feature[data-f="tools"]'), { after: 600 });
     await q(".article-item"); await wait(1600);
-    const art = [...document.querySelectorAll(".article-item")].find(b => b.textContent.includes(T.toolsArticle)) || document.querySelector(".article-item");
-    await click(art, { after: 900 }); await cap(T.tools2); await cp("tools");
-    await scrollTo(Math.min(640, document.documentElement.scrollHeight), 1400); await wait(1600); await scrollTo(0, 800);
+    const openArt = async title => { const a = [...document.querySelectorAll(".article-item")].find(b => b.textContent.includes(title)) || document.querySelector(".article-item"); await click(a, { after: 900 }); await q("#app .blk"); };
+    const imgReady = fig => { const im = fig && fig.querySelector("img"); return !im || (im.complete && im.naturalHeight) ? Promise.resolve() : new Promise(r => { im.addEventListener("load", r, { once: true }); setTimeout(r, 5000); }); };
+    // 自己控制的平滑捲動（圖片延遲載入時，瀏覽器內建的 smooth 捲動偶爾會被打斷）
+    const glide = (y, ms) => new Promise(r => { const y0 = scrollY, max = document.documentElement.scrollHeight - innerHeight, y1 = Math.max(0, Math.min(y, max)), d = ms / DK.SPEED, t0 = performance.now();
+      const step = t => { const k = Math.min(1, (t - t0) / d), e = k < 0.5 ? 2 * k * k : 1 - (-2 * k + 2) ** 2 / 2; window.scrollTo({ top: y0 + (y1 - y0) * e, behavior: "instant" }); k < 1 ? setTimeout(() => step(performance.now()), 16) : r(); }; step(t0); });
+    const glideTo = (el, offset, ms) => glide(scrollY + el.getBoundingClientRect().top - offset, ms);
+
+    // DiSC 標準模型：滑到圖形 → 暫時切成淺色模式，讓圖上的黑字看清楚 → 切回原本的模式
+    await openArt(T.toolsModel);
+    const fig = document.querySelector("#app figure.blk");
+    if (fig) {
+      await glideTo(fig, 200, 1400); await imgReady(fig); await wait(300); await glideTo(fig, 90, 900); await wait(1000);
+      const orig = document.documentElement.dataset.theme;   // 直接切換畫面主題（不移動游標到頁首，也不改使用者儲存的偏好）
+      if (orig !== "light") { applyTheme("light"); await wait(2400); applyTheme(orig); await wait(900); } else await wait(2400);
+      await glide(0, 900);
+    }
+    await click(await q('#app a[href="#/tools"]'), { after: 700 }); await q(".article-item"); await wait(600);
+
+    // 四種風格速覽：慢慢滑過 D、i、S、C → 滑回頂端 → 回首頁
+    await openArt(T.toolsArticle); await cap(T.tools2); await cp("tools");
+    for (const h of document.querySelectorAll("#app h2.blk")) { const f = h.nextElementSibling; await glideTo(h, 90, 1500); await imgReady(f && f.matches("figure") ? f : null); await wait(1500); }
+    await glide(0, 1800); await wait(500);
     await home();
 
     // ② 看懂自己：實際作答 15 題
